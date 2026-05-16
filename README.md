@@ -1,40 +1,56 @@
-# AI Copilot Config
+# AI Config
 
-A small repository with examples and a recommended layout for configuring GitHub Copilot and custom agents in VS Code.
+A repository with a unified AI agent configuration that works across Claude Code, GitHub Copilot, OpenAI Codex, Gemini, Cursor, and any tool that reads markdown from the workspace.
 
-## Purpose
+## Design principle
 
-- Provide simple, reusable conventions and examples for Copilot agents and skills.
-- Help teams produce consistent AI-assisted development results.
+One source of truth in `.ai/`. Tool-specific entry points are thin wrappers that reference it — no content duplication.
 
-## Contents (recommended)
+## Structure
 
-- `.github/instructions/` — global instructions and policies
-- `.github/skills/` — agent skills (core and project-specific)
-- `.github/agents/` — custom agent definitions
-- `.vscode/mcp.json` — MCP server configuration
-- `.github/hooks/` — automation and checks (format, lint, etc.)
+```
+.ai/                              ← single source of truth
+├── instructions.md               ← shared global rules
+├── agents/
+│   └── JoomlaGen.md             ← tool-agnostic agent behavior
+├── skills/
+│   ├── core/                    ← architecture, workflow, review, testing, DoD, JS, CSS, git, docs
+│   └── projects/
+│       ├── joomla/              ← joomla, php, leaflet, json
+│       └── astro/               ← astro, content, routing
+└── workflows/
+    ├── joomlagen-workflow.md
+    ├── review.md
+    └── security-review.md
+
+# Auto-loaded entry points (thin, reference .ai/)
+CLAUDE.md                        ← Claude Code (@imports)
+AGENTS.md                        ← OpenAI Codex, Gemini, generic fallback
+GEMINI.md                        ← Gemini CLI
+.cursorrules                     ← Cursor
+
+.github/copilot-instructions.md  ← GitHub Copilot
+.github/agents/JoomlaGen.agent.md
+.github/skills/joomlagen-workflow/SKILL.md  ← Copilot invocable skill
+
+.claude/agents/JoomlaGen.md      ← Claude subagent (metadata + model)
+.claude/commands/                ← Claude slash commands (/joomlagen-workflow, /review, /security-review)
+```
 
 ## Quick workflow
 
-1. Add global instructions in `.github/instructions/`.
-2. Add core skills in `.github/skills/core/`.
-3. Add project skills in `.github/skills/projects/`.
-4. Create agents in `.github/agents/` for specific roles.
-5. Configure MCP servers in `.vscode/mcp.json` and add hooks as needed.
-
-Suggested layout example
-
-```sh
-.github/skills/
-├── core/
-└── projects/
-```
+1. Edit rules in `.ai/` — changes apply to all tools automatically.
+2. Add a new skill: create a file in `.ai/skills/core/` or `.ai/skills/projects/<name>/`.
+3. Add a new workflow: create a file in `.ai/workflows/` and add a thin wrapper in `.claude/commands/` for Claude slash command support.
+4. Add a new agent: create tool-agnostic behavior in `.ai/agents/`, then add wrappers in `.claude/agents/` and `.github/agents/`.
 
 ## Model guidance
 
-- Choose models by task: code generation (code-focused models), reviews (reasoning-focused models), long-context tasks (large-context models).
+- Joomla tasks: `JoomlaGen` agent
+- Reviews: `/review` command
+- Security audits: `/security-review` command
+- Complex Joomla workflows: `/joomlagen-workflow` command
 
 ## Resources
 
-- VS Code Copilot docs: <https://code.visualstudio.com/docs/copilot/overview>
+See [references.md](references.md) for curated links on agent skills, Claude Code, MCP, and prompt engineering.

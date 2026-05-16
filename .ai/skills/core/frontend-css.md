@@ -7,11 +7,7 @@ description: Project CSS standards with BEM, mobile-first, and component-based o
 
 ## 1. Goal
 
-Define CSS development rules for templates and overrides, ensuring:
-
-* consistency
-* maintainability
-* compatibility with BEM and mobile-first design
+Define CSS development rules for templates and overrides, ensuring consistency, maintainability, and compatibility with BEM and mobile-first design.
 
 ---
 
@@ -28,10 +24,7 @@ Define CSS development rules for templates and overrides, ensuring:
 
 ## 3. CSS organization
 
-* Keep files separated by component or feature
-* Preferred structure:
-
-```plaintext id="css1"
+```plaintext
 /css/
   core/
   layout/
@@ -44,16 +37,7 @@ Define CSS development rules for templates and overrides, ensuring:
 
 ---
 
-## 4. Style and naming
-
-* Use clear and descriptive class names
-* Avoid confusing abbreviations
-* Use variables for colors, sizes, and spacing
-* Keep media queries clear and consistent
-
----
-
-## 5. Anti-patterns
+## 4. Anti-patterns
 
 * Indiscriminate use of `!important`
 * Duplicated classes
@@ -62,31 +46,15 @@ Define CSS development rules for templates and overrides, ensuring:
 
 ---
 
-## 6. Correct examples
+## 5. Correct examples
 
-### 6.1 Simple BEM
-
-```css id="css2"
+```css
 .card__title--highlight {
   color: var(--color-primary);
   font-size: var(--font-lg);
 }
-```
 
-### 6.2 Media query
-
-```css id="css3"
 @media (max-width: 768px) {
-  .card__title {
-    font-size: var(--font-md);
-  }
+  .card__title { font-size: var(--font-md); }
 }
 ```
-
----
-
-## 7. Project adaptation
-
-* Review existing CSS before adding new rules
-* Follow folder hierarchy
-* Keep consistency with JS and HTML

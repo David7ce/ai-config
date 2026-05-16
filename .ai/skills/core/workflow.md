@@ -23,7 +23,7 @@ Workflow rules so the agent can implement, refactor, and review code consistentl
 ## 3. Recommended process
 
 1. Analyze existing structure
-2. Apply the relevant technical module/skill
+2. Apply the relevant technical skill
 3. Load data with the required strategy (inline or AJAX)
 4. Review security and SEO constraints
 5. Document minimal changes in Markdown

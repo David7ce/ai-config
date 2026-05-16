@@ -1,11 +1,11 @@
-# GitHub Copilot Workspace Instructions
+# Agent Workspace Instructions
 
 Source of truth: `.ai/` directory.
 
 Read the following files before any task:
 
 ## Global rules
-`.ai/instructions.md`
+- `.ai/instructions.md`
 
 ## Core skills (always apply)
 - `.ai/skills/core/architecture.md` — highest priority
@@ -32,6 +32,5 @@ Read the following files before any task:
 - `.ai/workflows/review.md` — code review
 - `.ai/workflows/security-review.md` — security audit
 
-## Agents
-- `.ai/agents/JoomlaGen.md` — Joomla specialist agent behavior
-- `.github/agents/JoomlaGen.agent.md` — Copilot agent definition
+## Agent definitions
+- `.ai/agents/JoomlaGen.md` — Joomla specialist agent

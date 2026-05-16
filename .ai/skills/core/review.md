@@ -21,15 +21,15 @@ Rules for reviewing code and detecting errors or inconsistencies.
 
 ## 3. Required checklist
 
-* [ ] Variables y funciones modularizadas
-* [ ] JS nativo (vanilla) y ES Modules
+* [ ] Variables and functions modularized
+* [ ] Native JS (vanilla) and ES Modules
 * [ ] JSON used in read-only mode
-* [ ] Uso correcto de APIs Joomla
-* [ ] Override seguro
+* [ ] Correct use of Joomla APIs
+* [ ] Safe override structure
 * [ ] CSS BEM
-* [ ] SEO básico aplicado
-* [ ] ACL respetado
-* [ ] Sin librerías externas no permitidas
+* [ ] Basic SEO applied
+* [ ] ACL respected
+* [ ] No unapproved external libraries
 
 ---
 
@@ -50,5 +50,5 @@ Rules for reviewing code and detecting errors or inconsistencies.
 
 ## 6. Review example
 
-> JS file mixing UI and map logic in one place -> fail
-> Modular JS file with import/export and proper fetch flow -> pass
+> JS file mixing UI and map logic in one place → fail  
+> Modular JS file with import/export and proper fetch flow → pass

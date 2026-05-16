@@ -23,7 +23,7 @@ Define rules for using Leaflet and OpenStreetMap.
 
 ## 3. Recommended structure
 
-```plaintext id="leaf1"
+```plaintext
 /js/map/
   map.js
   markers.js
@@ -43,7 +43,7 @@ Define rules for using Leaflet and OpenStreetMap.
 
 ## 5. Modular example
 
-```js id="leaf2"
+```js
 import { loadData } from '../core/data.js';
 import { initMap } from './map.js';
 import { addMarkers } from './markers.js';

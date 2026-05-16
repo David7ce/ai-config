@@ -9,7 +9,7 @@ description: Development rules for Astro projects focused on performance and sim
 
 Define guidelines for working on Astro projects while reusing the shared `core` skills base.
 
-## Initial rules
+## Rules
 
 - Prioritize static generation when viable.
 - Keep components small and content-oriented.

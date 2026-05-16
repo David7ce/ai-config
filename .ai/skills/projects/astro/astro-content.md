@@ -9,7 +9,7 @@ description: Criteria for content management in Astro (collections, markdown, an
 
 Guide content management and page structure in Astro projects.
 
-## Initial rules
+## Rules
 
 - Use content collections with clear schemas.
 - Keep frontmatter consistent.

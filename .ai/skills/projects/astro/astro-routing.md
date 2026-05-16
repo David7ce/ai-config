@@ -9,7 +9,7 @@ description: Rules for routes, slugs, and navigation in Astro projects.
 
 Define conventions for routing and navigation in Astro.
 
-## Initial rules
+## Rules
 
 - Keep slugs predictable and SEO-friendly.
 - Centralize route-generation helpers.

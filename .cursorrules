@@ -1,14 +1,10 @@
-# GitHub Copilot Workspace Instructions
+# Cursor Project Rules
 
 Source of truth: `.ai/` directory.
 
-Read the following files before any task:
-
-## Global rules
-`.ai/instructions.md`
-
-## Core skills (always apply)
-- `.ai/skills/core/architecture.md` — highest priority
+Read these files before any task:
+- `.ai/instructions.md` — global workspace rules
+- `.ai/skills/core/architecture.md` — highest priority constraints
 - `.ai/skills/core/workflow.md`
 - `.ai/skills/core/review.md`
 - `.ai/skills/core/testing.md`
@@ -18,20 +14,18 @@ Read the following files before any task:
 - `.ai/skills/core/git.md`
 - `.ai/skills/core/documentation.md`
 
-## Project skills (load by task scope)
+For Joomla tasks, also read:
 - `.ai/skills/projects/joomla/joomla.md`
 - `.ai/skills/projects/joomla/php.md`
 - `.ai/skills/projects/joomla/javascript-leaflet.md`
 - `.ai/skills/projects/joomla/joomla-data-json.md`
+
+For Astro tasks, also read:
 - `.ai/skills/projects/astro/astro.md`
 - `.ai/skills/projects/astro/astro-content.md`
 - `.ai/skills/projects/astro/astro-routing.md`
 
-## Workflows
-- `.ai/workflows/joomlagen-workflow.md` — Joomla implementation and review
-- `.ai/workflows/review.md` — code review
-- `.ai/workflows/security-review.md` — security audit
-
-## Agents
-- `.ai/agents/JoomlaGen.md` — Joomla specialist agent behavior
-- `.github/agents/JoomlaGen.agent.md` — Copilot agent definition
+Workflows:
+- `.ai/workflows/joomlagen-workflow.md`
+- `.ai/workflows/review.md`
+- `.ai/workflows/security-review.md`
