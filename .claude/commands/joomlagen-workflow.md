@@ -17,7 +17,7 @@ Apply a consistent, secure, and verifiable workflow by composing skill documents
    - Leaflet/OpenStreetMap (when map features are touched): `.ai/skills/projects/joomla/javascript-leaflet.md`
    - Data JSON rules (when data files or map payloads are touched): `.ai/skills/projects/joomla/joomla-data-json.md`
 3. Implement minimal, modular, low-risk changes; avoid structural changes unless explicitly approved.
-4. Run validation with `.ai/skills/core/review.md` and `.ai/skills/core/testing.md`.
+4. Run validation with `.ai/skills/core/review-checklist.md` and `.ai/skills/core/testing.md`.
 5. Close only if `.ai/skills/core/definition-of-done.md` is fully satisfied.
 
 ## Security and consistency guardrails

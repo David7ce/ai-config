@@ -34,6 +34,18 @@ Apply this precedence order whenever instructions conflict:
 - Keep edits scoped to the request and avoid speculative refactors.
 - Prefer changes that are easy to test and easy to revert.
 
+## Path conventions (mandatory)
+
+- All file paths in code, configurations, scripts, and tool calls must be **relative to the project root**.
+- Never use absolute paths (e.g. `C:\Users\...`, `/home/user/...`, `/absolute/path`).
+- If an absolute path is strictly unavoidable, **stop and ask the user explicitly** before proceeding. Do not assume.
+
+## Runtime environment (mandatory)
+
+- All code execution, script runs, and commands must happen inside a **containerized or sandboxed environment** (devcontainer, Docker, or equivalent).
+- Never execute commands directly on the host system unless the user explicitly authorizes it.
+- Prefer devcontainer or Docker Compose configurations that are version-controlled in the repository.
+
 ## Security baseline
 
 - Validate input and escape output.
@@ -51,4 +63,8 @@ Apply this precedence order whenever instructions conflict:
 
 ## Completion rule
 
-A task is considered complete only if `review.md`, `testing.md`, and `definition-of-done.md` criteria are met.
+A task is considered complete only if `review-checklist.md`, `testing.md`, and `definition-of-done.md` criteria are met.
+
+## Additional resources
+
+See `references.md` at the repository root for curated links on agent skills, Claude Code, MCP, and prompt engineering.

@@ -1,4 +1,9 @@
-# Cursor Project Rules
+---
+description: Project-wide AI rules for this workspace
+alwaysApply: true
+---
+
+# Project Rules
 
 Source of truth: `.ai/` directory.
 
@@ -6,7 +11,7 @@ Read these files before any task:
 - `.ai/instructions.md` — global workspace rules
 - `.ai/skills/core/architecture.md` — highest priority constraints
 - `.ai/skills/core/workflow.md`
-- `.ai/skills/core/review.md`
+- `.ai/skills/core/review-checklist.md`
 - `.ai/skills/core/testing.md`
 - `.ai/skills/core/definition-of-done.md`
 - `.ai/skills/core/frontend-javascript.md`
@@ -22,8 +27,6 @@ For Joomla tasks, also read:
 
 For Astro tasks, also read:
 - `.ai/skills/projects/astro/astro.md`
-- `.ai/skills/projects/astro/astro-content.md`
-- `.ai/skills/projects/astro/astro-routing.md`
 
 Workflows:
 - `.ai/workflows/joomlagen-workflow.md`

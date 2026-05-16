@@ -17,6 +17,8 @@ Workflow rules so the agent can implement, refactor, and review code consistentl
 * Adapt to existing code before changing it
 * Validate security and consistency
 * Do not introduce large structural changes without approval
+* Use only **relative paths** — never absolute paths anchored to the host machine
+* Execute all commands inside a **container or sandbox** — never on the host directly
 
 ---
 

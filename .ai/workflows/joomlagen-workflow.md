@@ -18,7 +18,7 @@ Apply a consistent, secure, and verifiable workflow by composing skill documents
    - Data JSON rules (when data files or map payloads are touched): [joomla-data-json.md](.ai/skills/projects/joomla/joomla-data-json.md)
 3. Implement minimal, modular, low-risk changes; avoid structural changes unless explicitly approved.
 4. Run validation with:
-   - [review.md](.ai/skills/core/review.md)
+   - [review-checklist.md](.ai/skills/core/review-checklist.md)
    - [testing.md](.ai/skills/core/testing.md)
 5. Close only if [definition-of-done.md](.ai/skills/core/definition-of-done.md) is fully satisfied.
 

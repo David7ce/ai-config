@@ -1,9 +1,9 @@
 ---
-name: review
+name: review-checklist
 description: Technical review checklist to validate architecture, security, and quality before approval.
 ---
 
-# review.md
+# review-checklist.md
 
 ## 1. Goal
 

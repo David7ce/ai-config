@@ -5,7 +5,7 @@ Run a structured technical review of the current change or specified files.
 ## Steps
 
 1. Read `.ai/skills/core/architecture.md` and verify no architectural rules are violated.
-2. Apply the review checklist from `.ai/skills/core/review.md`.
+2. Apply the review checklist from `.ai/skills/core/review-checklist.md`.
 3. Check security constraints:
    - Inputs validated, outputs escaped
    - No unsafe SQL

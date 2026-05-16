@@ -136,6 +136,22 @@ Forbidden: Google Maps, JS frameworks, additional libraries without explicit app
 
 ---
 
+### 4.9 Path conventions (critical)
+
+* All file paths must be **relative to the project root** — never absolute.
+* Forbidden: `C:\Users\...`, `/home/user/...`, `D:\Workspaces\...`, or any path anchored to a host machine.
+* Exception requires explicit user approval before acting — do not assume.
+
+---
+
+### 4.10 Runtime environment (critical)
+
+* All code execution and commands must run inside a **containerized or sandboxed environment**.
+* Forbidden: running scripts, installs, or builds directly on the host system without authorization.
+* Use the project's devcontainer or Docker setup. If none exists, ask the user before executing.
+
+---
+
 ## 5. Security (critical)
 
 ### Required:

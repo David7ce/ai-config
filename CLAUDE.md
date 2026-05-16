@@ -7,7 +7,7 @@
 ### Core
 @.ai/skills/core/architecture.md
 @.ai/skills/core/workflow.md
-@.ai/skills/core/review.md
+@.ai/skills/core/review-checklist.md
 @.ai/skills/core/testing.md
 @.ai/skills/core/definition-of-done.md
 @.ai/skills/core/frontend-javascript.md
@@ -23,5 +23,3 @@
 
 ### Astro
 @.ai/skills/projects/astro/astro.md
-@.ai/skills/projects/astro/astro-content.md
-@.ai/skills/projects/astro/astro-routing.md

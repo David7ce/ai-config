@@ -10,7 +10,7 @@ Read the following files before any task:
 ## Core skills (always apply)
 - `.ai/skills/core/architecture.md` — highest priority
 - `.ai/skills/core/workflow.md`
-- `.ai/skills/core/review.md`
+- `.ai/skills/core/review-checklist.md`
 - `.ai/skills/core/testing.md`
 - `.ai/skills/core/definition-of-done.md`
 - `.ai/skills/core/frontend-javascript.md`
@@ -24,8 +24,6 @@ Read the following files before any task:
 - `.ai/skills/projects/joomla/javascript-leaflet.md`
 - `.ai/skills/projects/joomla/joomla-data-json.md`
 - `.ai/skills/projects/astro/astro.md`
-- `.ai/skills/projects/astro/astro-content.md`
-- `.ai/skills/projects/astro/astro-routing.md`
 
 ## Workflows
 - `.ai/workflows/joomlagen-workflow.md` — Joomla implementation and review
