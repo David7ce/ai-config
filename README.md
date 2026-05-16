@@ -27,7 +27,8 @@ One source of truth in `.ai/`. Tool-specific entry points are thin wrappers that
 CLAUDE.md                        ← Claude Code (@imports)
 AGENTS.md                        ← OpenAI Codex, Gemini, generic fallback
 GEMINI.md                        ← Gemini CLI
-.cursorrules                     ← Cursor
+.cursor/rules/project.mdc        ← Cursor (alwaysApply)
+.windsurfrules                   ← Windsurf
 
 .github/copilot-instructions.md  ← GitHub Copilot
 .github/agents/JoomlaGen.agent.md
@@ -50,6 +51,26 @@ GEMINI.md                        ← Gemini CLI
 - Reviews: `/review` command
 - Security audits: `/security-review` command
 - Complex Joomla workflows: `/joomlagen-workflow` command
+
+## Installing community skills with skills.sh
+
+[skills.sh](https://skills.sh) (by Vercel) is an open registry of reusable agent skill files. It auto-detects your tech stack and installs matching skill documents directly into your project.
+
+```sh
+npx skills
+```
+
+The CLI scans your repo (package.json, config files, file extensions) and offers a curated list of relevant skills to install. Drop the output into `.ai/skills/projects/<name>/` to keep it within this repo's unified structure so all tools pick it up automatically.
+
+You can also install a specific skill by name:
+
+```sh
+npx skills add nextjs
+npx skills add tailwind
+npx skills add typescript
+```
+
+> Skills from the registry are plain markdown files — no lock-in. Review them before committing, and place them under `.ai/skills/` to stay consistent with the single-source-of-truth layout.
 
 ## Resources
 
