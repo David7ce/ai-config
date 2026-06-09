@@ -14,6 +14,8 @@
 @.ai/skills/core/frontend-css.md
 @.ai/skills/core/git.md
 @.ai/skills/core/documentation.md
+@.ai/skills/core/ai-agent-stack.md
+@.ai/skills/core/ai-agent-modules.md
 
 ### Joomla
 @.ai/skills/projects/joomla/joomla.md

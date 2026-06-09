@@ -17,6 +17,8 @@ Read the following files before any task:
 - `.ai/skills/core/frontend-css.md`
 - `.ai/skills/core/git.md`
 - `.ai/skills/core/documentation.md`
+- `.ai/skills/core/ai-agent-stack.md` — base environment to run agents predictably
+- `.ai/skills/core/ai-agent-modules.md` — per-project toolchains layered on the base
 
 ## Project skills (load by task scope)
 - `.ai/skills/projects/joomla/joomla.md`

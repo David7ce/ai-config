@@ -14,7 +14,7 @@ One source of truth in `.ai/`. Tool-specific entry points are thin wrappers that
 ├── agents/
 │   └── JoomlaGen.md             ← tool-agnostic agent behavior
 ├── skills/
-│   ├── core/                    ← architecture, workflow, review, testing, DoD, JS, CSS, git, docs
+│   ├── core/                    ← architecture, workflow, review, testing, DoD, JS, CSS, git, docs, agent stack, agent modules
 │   └── projects/
 │       ├── joomla/              ← joomla, php, leaflet, json
 │       └── astro/               ← astro, content, routing
