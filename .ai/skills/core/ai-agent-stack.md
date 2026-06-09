@@ -20,11 +20,15 @@ Five things. Nothing else is required to run an agent.
 
 ### OS + shell
 
-Zsh/Bash as the primary shell on every platform. On Windows use **WSL2 (Ubuntu)** — not PowerShell — which gives ~95% of the Linux experience while keeping native Windows apps. Reserve PowerShell/CMD for Windows-only tasks.
-
-Unix paths (`~/projects/x`) cause fewer agent errors than Windows paths (`C:\Users\...\projects\x`).
+Zsh/Bash is the **default** primary shell. On Windows, WSL2 (Ubuntu) gives ~95% of the Linux experience while keeping native Windows apps. Unix paths (`~/projects/x`) cause fewer agent errors than Windows paths (`C:\Users\...\projects\x`).
 
 Zsh plugins: `zsh-autosuggestions`, `zsh-syntax-highlighting`.
+
+**Match the shell to the project's runtime — this overrides the default.** "Avoid PowerShell" is not absolute. When the app stack is **Windows-native** (Laragon, IIS, .NET, MSSQL, Windows-only build tools), PowerShell *is* the correct shell:
+
+- Forcing WSL2 onto a Windows-native project means working across the Win↔Linux filesystem boundary (`/mnt/c/...`), which is slow and path-fragile.
+- The shell should live where the code runs. Linux/containerized/cross-platform target → Zsh/WSL2. Windows-native target → PowerShell.
+- So: WSL2/Zsh is the default *because most stacks deploy to Linux* — not because PowerShell is bad. Pick per project, not by reflex.
 
 ### Package manager
 
