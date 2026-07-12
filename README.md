@@ -29,6 +29,7 @@ AGENTS.md                        ← OpenAI Codex, Gemini, generic fallback
 GEMINI.md                        ← Gemini CLI
 .cursor/rules/project.mdc        ← Cursor (alwaysApply)
 .windsurfrules                   ← Windsurf
+.vscode/mcp.json                 ← MCP servers (filesystem, github)
 
 .github/copilot-instructions.md  ← GitHub Copilot
 .github/agents/JoomlaGen.agent.md
@@ -74,4 +75,20 @@ npx skills add typescript
 
 ## Resources
 
-See [references.md](references.md) for curated links on agent skills, Claude Code, MCP, and prompt engineering.
+See [references.md](references.md) for curated links on agent skills, Claude Code, MCP,
+context/memory tooling, plugin marketplaces, and prompt engineering.
+
+## Related: personal AI notes and tools
+
+This repo is the *project-embedded* AI config (skills/agents shipped with a Joomla repo).
+Machine-level AI notes/tools, copied in from the `AI+PC` inbox repo, live under
+[personal-notes/](personal-notes/):
+
+- **[ai-agent-basics.md](personal-notes/ai-agent-basics.md)** — the six-block mental model
+  (Context, Memory, Connectors/MCP, Skills, Plugins, Harness) used to pick the tools listed
+  in `references.md`.
+- **[ai-releases/](personal-notes/ai-releases/ai-releases.md)** — running Claude/ChatGPT/Gemini
+  release tracker.
+- **[claude-skills-sync/](personal-notes/claude-skills-sync/README.md)** — syncs
+  `~/.claude/skills/` and `~/.claude/plugins/` (user-level, machine-specific) across machines
+  via git. Complements this repo's `.ai/skills/` (project-level, versioned with the code).

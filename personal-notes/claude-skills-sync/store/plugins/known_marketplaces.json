@@ -1,0 +1,34 @@
+{
+  "claude-plugins-official": {
+    "source": {
+      "source": "github",
+      "repo": "anthropics/claude-plugins-official"
+    },
+    "installLocation": "C:\\Users\\d7\\.claude\\plugins\\marketplaces\\claude-plugins-official",
+    "lastUpdated": "2026-07-12T10:47:20.391Z"
+  },
+  "caveman": {
+    "source": {
+      "source": "github",
+      "repo": "juliusbrussee/caveman"
+    },
+    "installLocation": "C:\\Users\\d7\\.claude\\plugins\\marketplaces\\caveman",
+    "lastUpdated": "2026-07-11T22:36:06.051Z"
+  },
+  "ruview": {
+    "source": {
+      "source": "github",
+      "repo": "ruvnet/RuView"
+    },
+    "installLocation": "C:\\Users\\d7\\.claude\\plugins\\marketplaces\\ruview",
+    "lastUpdated": "2026-07-11T22:59:55.197Z"
+  },
+  "ponytail": {
+    "source": {
+      "source": "github",
+      "repo": "DietrichGebert/ponytail"
+    },
+    "installLocation": "C:\\Users\\d7\\.claude\\plugins\\marketplaces\\ponytail",
+    "lastUpdated": "2026-07-12T10:39:01.257Z"
+  }
+}
