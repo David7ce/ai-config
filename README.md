@@ -76,19 +76,20 @@ npx skills add typescript
 ## Resources
 
 See [references.md](references.md) for curated links on agent skills, Claude Code, MCP,
-context/memory tooling, plugin marketplaces, and prompt engineering.
+context/memory tooling, plugin marketplaces, and prompt engineering, and
+[ai-releases/](ai-releases/ai-releases.md) for a running Claude/ChatGPT/Gemini release tracker.
 
-## Related: personal AI notes and tools
+## Related: dotfiles
 
 This repo is the *project-embedded* AI config (skills/agents shipped with a Joomla repo).
-Machine-level AI notes/tools, copied in from the `AI+PC` inbox repo, live under
-[personal-notes/](personal-notes/):
+Everything below is this machine's dotfiles — personal, versioned here so nothing is lost
+on a format or a new machine:
 
-- **[ai-agent-basics.md](personal-notes/ai-agent-basics.md)** — the six-block mental model
+- **[ai-agent-basics.md](ai-agent-basics.md)** — the six-block mental model
   (Context, Memory, Connectors/MCP, Skills, Plugins, Harness) used to pick the tools listed
   in `references.md`.
-- **[ai-releases/](personal-notes/ai-releases/ai-releases.md)** — running Claude/ChatGPT/Gemini
-  release tracker.
-- **[claude-skills-sync/](personal-notes/claude-skills-sync/README.md)** — syncs
-  `~/.claude/skills/` and `~/.claude/plugins/` (user-level, machine-specific) across machines
-  via git. Complements this repo's `.ai/skills/` (project-level, versioned with the code).
+- **[claude-skills-sync/](claude-skills-sync/README.md)** — this repo's `store/` is the
+  source of truth for `~/.claude/{skills,plugins,settings.json}` (user-level,
+  machine-specific); `import` applies it to a machine, `export` captures a local change
+  back into the repo. Complements this repo's `.ai/skills/` (project-level, versioned
+  with the code, not machine-specific).

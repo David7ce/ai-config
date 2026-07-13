@@ -63,12 +63,16 @@ Curated resources for AI agent configuration, skills, and prompt engineering.
 - [prompts.chat](https://prompts.chat) — Community prompt collection
 - [system_prompts_leaks](https://github.com/asgeirtj/system_prompts_leaks) — Leaked system prompts from major AI products
 
-## Personal notes (copied from the AI+PC repo)
+## Release tracking
 
-- [ai-agent-basics.md](personal-notes/ai-agent-basics.md) — six-block framing (Context,
+- [ai-releases/](ai-releases/ai-releases.md) — consolidated Claude/ChatGPT/Gemini release
+  timeline, updated per quarter
+
+## Dotfiles (this machine)
+
+- [ai-agent-basics.md](ai-agent-basics.md) — six-block framing (Context,
   Memory, Connectors, Skills, Plugins, Harness) this list's tool picks are partly curated from
-- [ai-releases/](personal-notes/ai-releases/ai-releases.md) — consolidated Claude/ChatGPT/Gemini
-  release timeline, updated per quarter
-- [claude-skills-sync/](personal-notes/claude-skills-sync/README.md) — PowerShell backup/restore
-  for `~/.claude/{skills,plugins}` across machines, git as the DB (different concern than this
-  repo's project-embedded `.ai/skills/`)
+- [claude-skills-sync/](claude-skills-sync/README.md) — PowerShell import/export for
+  `~/.claude/{skills,plugins,settings.json}` across machines; `store/` in this repo is the
+  source of truth, git is the DB (different concern than this repo's project-embedded
+  `.ai/skills/`)

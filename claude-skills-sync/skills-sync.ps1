@@ -1,5 +1,9 @@
-# skills-sync.ps1 — backup / restore / list / remove for Claude Code skills + plugin registry + config
+# skills-sync.ps1 — import / export / list / remove for Claude Code skills + plugin registry + config
 # CONTRACT:
+#   This repo (./store/) is the source of truth. 'import' applies it to this machine's
+#   live ~/.claude (the main, day-to-day action); 'export' captures a live change back
+#   into the repo so it becomes the new source of truth (run after installing a plugin
+#   or hand-editing a skill live), then commit/push.
 #   Mirrors   ~/.claude/skills                    <->  ./store/skills/        (full content)
 #   Copies    ~/.claude/plugins/installed_plugins.json
 #             ~/.claude/plugins/known_marketplaces.json  <->  ./store/plugins/
@@ -7,18 +11,18 @@
 #   NEVER stored: .credentials.json (secrets), history/runtime state.
 #   Plugin cache/marketplaces/data are NOT stored — regenerable from the two registries
 #   (marketplaces re-clone from their git repos; plugins reinstall from marketplaces).
-#   READ-ONLY for 'list'. 'backup'/'restore' mirror skills (destination extras deleted).
+#   READ-ONLY for 'list'. 'import'/'export' mirror skills (destination extras deleted).
 #   'remove' deletes a SKILL from both sides (plugins: uninstall via /plugin instead).
-#   'restore' rewrites absolute …\.claude paths in registries AND settings.json to $HOME.
+#   'import' rewrites absolute …\.claude paths in registries AND settings.json to $HOME.
 #   No admin. Reversible via git history. Cross-platform pwsh 7 (Windows/Linux).
 #
 # USAGE:
-#   ./skills-sync.ps1                  # list (manifest view + live<->store drift)
-#   ./skills-sync.ps1 backup           # live -> store, regenerate manifest.json
-#   ./skills-sync.ps1 restore          # store -> live (new machine: clone repo, run this)
+#   ./skills-sync.ps1                  # list (manifest view + repo<->system drift: skills, plugins, settings.json)
+#   ./skills-sync.ps1 import           # store -> live (main action: apply this repo's config to this machine)
+#   ./skills-sync.ps1 export           # live -> store, regenerate manifest.json (capture a local change into the repo)
 #   ./skills-sync.ps1 remove <name>    # delete skill from store AND live, update manifest
 param(
-    [ValidateSet('list', 'backup', 'restore', 'remove')]
+    [ValidateSet('list', 'import', 'export', 'remove')]
     [string]$Action = 'list',
     [string]$Name
 )
@@ -90,6 +94,13 @@ function Mirror([string]$src, [string]$dst) {
     Copy-Item $src -Destination $dst -Recurse
 }
 
+function Show-Drift([string]$label, [string[]]$storeItems, [string[]]$liveItems) {
+    $missing = @($storeItems | Where-Object { $_ -and $_ -notin $liveItems })
+    $extra   = @($liveItems  | Where-Object { $_ -and $_ -notin $storeItems })
+    if ($missing) { Write-Host "$label — repo has, system missing: $($missing -join ', ')" -ForegroundColor Yellow }
+    if ($extra)   { Write-Host "$label — system has, not in repo: $($extra -join ', ')"   -ForegroundColor Yellow }
+}
+
 function Repair-AbsolutePaths {
     # Registries and settings.json carry absolute paths from the source machine
     # (installPath, installLocation, statusLine command) — rewrite every
@@ -112,26 +123,8 @@ function Repair-AbsolutePaths {
 }
 
 switch ($Action) {
-    'backup' {
-        Write-Host "skills: live -> store" -ForegroundColor Cyan
-        Mirror $LiveSkills $StoreSkills
-        Write-Host "plugins: registries -> store" -ForegroundColor Cyan
-        New-Item -ItemType Directory -Path $StorePlugins -Force | Out-Null
-        foreach ($f in $RegistryFiles) {
-            Copy-Item (Join-Path $LivePlugins $f) -Destination $StorePlugins -Force
-            Write-Host "  $f"
-        }
-        Write-Host "config: -> store" -ForegroundColor Cyan
-        New-Item -ItemType Directory -Path $StoreConfig -Force | Out-Null
-        foreach ($f in $ConfigFiles) {
-            $src = Join-Path $ClaudeDir $f
-            if (Test-Path $src) { Copy-Item $src -Destination $StoreConfig -Force; Write-Host "  $f" }
-        }
-        Write-Manifest
-        Write-Host "now: git add/commit/push to sync across machines" -ForegroundColor DarkGray
-    }
-    'restore' {
-        if (-not (Test-Path $StoreSkills)) { throw "store empty — run 'backup' on the source machine first" }
+    'import' {
+        if (-not (Test-Path $StoreSkills)) { throw "store empty — run 'export' on the source machine first" }
         Write-Host "skills: store -> live ($LiveSkills)" -ForegroundColor Cyan
         Mirror $StoreSkills $LiveSkills
         Write-Host "plugins: registries -> live" -ForegroundColor Cyan
@@ -147,6 +140,24 @@ switch ($Action) {
         Repair-AbsolutePaths
         Write-Host "done. Skills active now; plugins re-fetch from their marketplaces" -ForegroundColor Green
         Write-Host "on next Claude Code start (check with /plugin)." -ForegroundColor Green
+    }
+    'export' {
+        Write-Host "skills: live -> store" -ForegroundColor Cyan
+        Mirror $LiveSkills $StoreSkills
+        Write-Host "plugins: registries -> store" -ForegroundColor Cyan
+        New-Item -ItemType Directory -Path $StorePlugins -Force | Out-Null
+        foreach ($f in $RegistryFiles) {
+            Copy-Item (Join-Path $LivePlugins $f) -Destination $StorePlugins -Force
+            Write-Host "  $f"
+        }
+        Write-Host "config: -> store" -ForegroundColor Cyan
+        New-Item -ItemType Directory -Path $StoreConfig -Force | Out-Null
+        foreach ($f in $ConfigFiles) {
+            $src = Join-Path $ClaudeDir $f
+            if (Test-Path $src) { Copy-Item $src -Destination $StoreConfig -Force; Write-Host "  $f" }
+        }
+        Write-Manifest
+        Write-Host "now: git add/commit/push so this becomes the source of truth" -ForegroundColor DarkGray
     }
     'remove' {
         if (-not $Name) { throw "usage: skills-sync.ps1 remove <skill-name>" }
@@ -164,18 +175,30 @@ switch ($Action) {
             Write-Host "manifest ($($m.generated))" -ForegroundColor Cyan
             Write-Host "--- skills ---"
             $m.skills | Format-Table name, files, updated, description -AutoSize
-            Write-Host "--- plugins (registry only; content re-fetches on restore) ---"
+            Write-Host "--- plugins (registry only; content re-fetches on import) ---"
             $m.plugins | Format-Table name, version, lastUpdated -AutoSize
         } else {
-            Write-Host "no manifest yet — run: ./skills-sync.ps1 backup" -ForegroundColor Yellow
+            Write-Host "no manifest yet — run: ./skills-sync.ps1 export" -ForegroundColor Yellow
         }
+        Write-Host "--- drift: repo (source of truth) vs this system ---" -ForegroundColor Cyan
         if (Test-Path $LiveSkills) {
-            $liveNames  = @(Get-ChildItem $LiveSkills  -Directory -ErrorAction SilentlyContinue).Name
-            $storeNames = @(Get-ChildItem $StoreSkills -Directory -ErrorAction SilentlyContinue).Name
-            $onlyLive  = @($liveNames  | Where-Object { $_ -and $_ -notin $storeNames })
-            $onlyStore = @($storeNames | Where-Object { $_ -and $_ -notin $liveNames })
-            if ($onlyLive)  { Write-Host "live only (not backed up): $($onlyLive -join ', ')"  -ForegroundColor Yellow }
-            if ($onlyStore) { Write-Host "store only (not restored): $($onlyStore -join ', ')" -ForegroundColor Yellow }
+            Show-Drift 'skills' `
+                (Get-ChildItem $StoreSkills -Directory -ErrorAction SilentlyContinue).Name `
+                (Get-ChildItem $LiveSkills  -Directory -ErrorAction SilentlyContinue).Name
+        }
+        Show-Drift 'plugins' (Get-PluginList $StorePlugins).name (Get-PluginList $LivePlugins).name
+
+        $liveSettings  = Join-Path $ClaudeDir 'settings.json'
+        $storeSettings = Join-Path $StoreConfig 'settings.json'
+        if ((Test-Path $liveSettings) -and (Test-Path $storeSettings)) {
+            $live  = Get-Content $liveSettings  -Raw | ConvertFrom-Json
+            $store = Get-Content $storeSettings -Raw | ConvertFrom-Json
+            $liveKeys  = @($live.PSObject.Properties.Name)
+            $storeKeys = @($store.PSObject.Properties.Name)
+            Show-Drift 'settings.json' $storeKeys $liveKeys
+            $changed = @($storeKeys | Where-Object { $_ -in $liveKeys -and
+                (($live.$_ | ConvertTo-Json -Depth 10 -Compress) -ne ($store.$_ | ConvertTo-Json -Depth 10 -Compress)) })
+            if ($changed) { Write-Host "settings.json — differs on both sides: $($changed -join ', ')" -ForegroundColor Yellow }
         }
     }
 }
