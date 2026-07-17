@@ -59,8 +59,11 @@ async function main() {
   assert.ok(fs.existsSync(path.join(scaffoldTarget, '.ai', 'instructions.md')), 'scaffolds .ai/instructions.md');
   assert.ok(fs.existsSync(path.join(scaffoldTarget, 'CLAUDE.md')), 'still writes CLAUDE.md after scaffolding');
 
-  // dotfiles list touches the real ~/.claude (read-only) — just confirm it doesn't throw
-  await dotfiles.run(['list'], sourceDir);
+  // dotfiles list touches the real ~/.claude (read-only) — just confirm it doesn't throw.
+  // --all bypasses the interactive menu, which would otherwise block on stdin here.
+  await dotfiles.run(['list', '--all'], sourceDir);
+  await dotfiles.run(['list', '--claude'], sourceDir);
+  await dotfiles.run(['list', '--nonexistent-flag'], sourceDir);
 
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('ok — all checks passed');

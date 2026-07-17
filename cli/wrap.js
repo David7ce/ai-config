@@ -6,12 +6,12 @@
 // --windsurf --copilot --mcp --all --target <dir> --source <dir>
 const fs = require('fs');
 const path = require('path');
-const readline = require('readline');
-const { write, mirrorDir } = require('./lib');
+const { write, mirrorDir, pickFromMenu } = require('./lib');
 
 // Each entry is everything there is to know about one target: label + path for the menu,
 // generate() for `run()`. Adding a tool means adding one entry here — nowhere else.
-const AGENTS = [
+// Not "agents": mcp is a service config, not an agent, so TARGETS is the honest name.
+const TARGETS = [
   {
     key: 'claude',
     label: 'Claude Code',
@@ -73,25 +73,11 @@ function parseArgs(argv) {
   return { flags, opts };
 }
 
-function askMenu() {
-  console.log('\nAI Config — select which agents to set up (.ai/ is the source of truth)\n');
-  AGENTS.forEach((a, i) => console.log(`  ${String(i + 1).padStart(2)}) ${a.label.padEnd(18)} ${a.file}`));
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question('\nNumbers separated by spaces/commas, "a" for all, Enter to cancel: ', (answer) => {
-      rl.close();
-      const trimmed = answer.trim().toLowerCase();
-      if (!trimmed) return resolve(new Set());
-      if (trimmed === 'a' || trimmed === 'all') return resolve(new Set(AGENTS.map((a) => a.key)));
-      const picked = new Set();
-      for (const tok of trimmed.split(/[\s,]+/)) {
-        const agent = AGENTS[parseInt(tok, 10) - 1];
-        if (agent) picked.add(agent.key);
-      }
-      resolve(picked);
-    });
-  });
-}
+const askMenu = () =>
+  pickFromMenu(
+    TARGETS.map((t) => ({ key: t.key, label: t.label, extra: t.file })),
+    'AI Config — select which agents to set up (.ai/ is the source of truth)'
+  );
 
 // ---- .ai/ source ----
 
@@ -238,9 +224,9 @@ async function run(argv) {
 
   let selected = new Set();
   if (flags.has('all')) {
-    selected = new Set(AGENTS.map((a) => a.key));
+    selected = new Set(TARGETS.map((t) => t.key));
   } else {
-    for (const a of AGENTS) if (flags.has(a.key)) selected.add(a.key);
+    for (const t of TARGETS) if (flags.has(t.key)) selected.add(t.key);
     if (flags.has('opencode')) selected.add('codex');
   }
 
@@ -258,8 +244,8 @@ async function run(argv) {
 
   const src = readSource(sourceDir);
   const written = [];
-  for (const agent of AGENTS) {
-    if (selected.has(agent.key)) written.push(...agent.generate(src, targetDir, sourceDir));
+  for (const target of TARGETS) {
+    if (selected.has(target.key)) written.push(...target.generate(src, targetDir, sourceDir));
   }
 
   console.log(`\n✓ wrote ${written.length} item(s) to ${targetDir}:`);

@@ -35,8 +35,9 @@ out verbatim, still never hand-edited at their final path.
 cli/                            ← the tool, not agent config — stays outside .ai/
 ├── index.js                    ← router: `wrap` (default) | `dotfiles`
 ├── wrap.js                     ← generates project config below from .ai/
-├── dotfiles.js                 ← applies .ai/dotfiles/claude/ to ~/.claude (import-only)
-└── lib.js                      ← shared write/mirror helpers
+├── dotfiles.js                 ← applies .ai/dotfiles/<agent>/ to that agent's home dir
+│                                  (import-only, multi-agent — see DOTFILE_TARGETS)
+└── lib.js                      ← shared write/mirror/menu helpers
 
 wiki/                            ← reading material, not agent config — stays outside .ai/
 ├── ai-agent-basics.md           ← six-block mental model behind the picks in references.md
@@ -99,11 +100,21 @@ Editing workflow, either repo:
 
 ## Applying this machine's dotfiles
 
+Multi-agent by design, same as `wrap`: no flags → interactive menu (which agent, detected
+OS and home dir shown up front); flags skip it.
+
 ```sh
-node cli/index.js dotfiles list      # drift: .ai/dotfiles/claude vs ~/.claude, read-only
-node cli/index.js dotfiles import    # applies it — mirror, deletes extras in ~/.claude
-node cli/index.js dotfiles remove <skill-name>
+node cli/index.js dotfiles list              # menu: pick an agent, see its drift, read-only
+node cli/index.js dotfiles list --claude     # skip the menu
+node cli/index.js dotfiles import --all      # mirror into every configured agent's home dir
+node cli/index.js dotfiles remove <skill-name> --claude
 ```
+
+Only Claude Code is wired up today (`.ai/dotfiles/claude/` → `~/.claude`, path resolved with
+Node's `os.homedir()` — correct per OS without the code branching on platform). Adding
+another agent means adding one entry to `DOTFILE_TARGETS` in `cli/dotfiles.js` plus real
+content in `.ai/dotfiles/<agent>/` — deliberately not pre-filled with guessed paths for
+Codex/Gemini/opencode/Cursor, since a wrong guess there writes into a real user profile.
 
 One direction only, by design: `.ai/dotfiles/claude/` is what you hand-edit (skill files,
 `settings.json`) — with help, via prompts, rather than through an automated
