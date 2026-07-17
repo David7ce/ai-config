@@ -5,16 +5,17 @@
 // menu pick which agent(s), same reason (no arrow-key TUI dep, correct on every terminal).
 // One direction only: .ai/<agent>/home/ is what you hand-edit, never the live homeDir. No export.
 // Only Claude Code is wired up today — its ~/.claude path and shape (skills/, hooks/,
-// settings.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB of cache +
-// marketplace git clones — settings.json's enabledPlugins/extraKnownMarketplaces is what
-// drives re-fetching those, no need to duplicate already-versioned public repos) and ide/
-// (per-process .lock files, pure runtime state, not config).
+// settings.json, installers.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB
+// of cache + marketplace git clones) and ide/ (per-process .lock files, pure runtime state,
+// not config) — installers.json (see `plugins` action below) reproduces both on demand
+// instead, package-manager style, so there's nothing to duplicate or go stale.
 // Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
 // content in .ai/<agent>/home/ AND a confirmed home-dir path for that tool — don't guess
 // at where another tool's user config lives, a wrong guess here writes into a real profile.
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawnSync } = require('child_process');
 const { mirrorDir, pickFromMenu } = require('./lib');
 
 // dirName, not a precomputed absolute path: lets --home override where "home" is (see run()),
@@ -89,6 +90,16 @@ function listOne(sourceDir, target) {
     );
     if (changed.length) console.log(`settings.json — differs on both sides: ${changed.join(', ')}`);
   }
+
+  const installersFile = path.join(dot, 'installers.json');
+  if (fs.existsSync(installersFile) && fs.existsSync(liveSettingsFile)) {
+    const installers = JSON.parse(fs.readFileSync(installersFile, 'utf8'));
+    const claudePlugins = installers
+      .filter((i) => i.command === 'claude' && i.args[0] === 'plugin' && i.args[1] === 'install')
+      .map((i) => i.args[2]);
+    const live = JSON.parse(fs.readFileSync(liveSettingsFile, 'utf8'));
+    showDrift('plugins (run `dotfiles plugins` to install)', claudePlugins, Object.keys(live.enabledPlugins || {}));
+  }
 }
 
 // settings.json can carry an absolute path from the source machine (e.g. a statusLine
@@ -127,7 +138,72 @@ function importOne(sourceDir, target) {
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(target.homeDir, 'settings.json'));
 
   repairAbsolutePaths(target);
-  console.log(`done. Skills active now; plugins re-fetch from their marketplaces on next ${target.label} start.`);
+  console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from installers.json.`);
+}
+
+// Package-manager style: a labeled list of {command, args} — Claude plugin installs and
+// third-party tool installers alike — run in order, one machine-modifying step per entry.
+// Not chained into importOne(): import stays pure file-mirroring, plugins is the explicit
+// "go install things" step (network calls, running remote scripts), same reason winget
+// asks you to type `install` rather than doing it as a side effect of anything else.
+function pluginsOne(sourceDir, target) {
+  const file = path.join(dotfilesSourceDir(sourceDir, target), 'installers.json');
+  if (!fs.existsSync(file)) {
+    console.log(`${target.label}: no installers.json — nothing to install`);
+    return;
+  }
+  const installers = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const quote = (a) => (/\s/.test(a) ? `"${a}"` : a);
+  for (const { label, command, args } of installers) {
+    const cmdLine = [command, ...args].map(quote).join(' ');
+    console.log(`\n${target.label}: ${label}\n  $ ${cmdLine}`);
+    // shell:true with a single pre-quoted string (no separate args array) — the safe form;
+    // shell:true *with* an args array lets the shell re-split unescaped strings (Node
+    // flags this, DEP0190) and breaks paths with spaces like "C:\Program Files\...".
+    const result = spawnSync(cmdLine, { stdio: 'inherit', shell: true });
+    if (result.error) console.log(`  failed to run: ${result.error.message}`);
+    else if (result.status !== 0) console.log(`  exited ${result.status} — likely already installed, continuing`);
+  }
+}
+
+function listMdNames(dir) {
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort() : [];
+}
+
+// Everything at a glance: .ai/<tool>/project/ (agents, commands/prompts) + .ai/<tool>/home/
+// (skills, settings, installers.json expanded into its actual marketplace/plugin entries —
+// not just the filename). Generated from disk every run, nothing here to hand-maintain or
+// let go stale.
+function treeOne(sourceDir, target) {
+  const projectDir = path.join(sourceDir, target.key, 'project');
+  const home = dotfilesSourceDir(sourceDir, target);
+  console.log(`\n${target.label} — .ai/${target.key}/`);
+
+  for (const sub of ['agents', 'commands']) {
+    const names = listMdNames(path.join(projectDir, sub));
+    if (names.length) {
+      console.log(`  project/${sub}/${sub === 'commands' ? '  (prompts)' : ''}`);
+      for (const n of names) console.log(`    ${n}`);
+    }
+  }
+
+  const skills = listDirNames(path.join(home, 'skills'));
+  if (skills.length) {
+    console.log('  home/skills/');
+    for (const s of skills) console.log(`    ${s}`);
+  }
+
+  const settingsFile = path.join(home, 'settings.json');
+  if (fs.existsSync(settingsFile)) {
+    console.log('  home/settings.json');
+    for (const k of Object.keys(JSON.parse(fs.readFileSync(settingsFile, 'utf8')))) console.log(`    ${k}`);
+  }
+
+  const installersFile = path.join(home, 'installers.json');
+  if (fs.existsSync(installersFile)) {
+    console.log('  home/installers.json  (plugins — run `dotfiles plugins` to install)');
+    for (const i of JSON.parse(fs.readFileSync(installersFile, 'utf8'))) console.log(`    ${i.label}`);
+  }
 }
 
 function removeOne(sourceDir, target, name) {
@@ -150,8 +226,10 @@ async function run(argv, defaultSourceDir) {
   const targets = resolveTargets(homeBase);
   const [action, name] = rest;
 
-  if (!['import', 'list', 'remove', undefined].includes(action)) {
-    console.log('usage: ai-config dotfiles <import|list|remove> [--claude|--all] [name] [--source <dir>] [--home <dir>]');
+  if (!['import', 'list', 'remove', 'plugins', 'tree', undefined].includes(action)) {
+    console.log(
+      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--all] [name] [--source <dir>] [--home <dir>]'
+    );
     return;
   }
 
@@ -169,6 +247,8 @@ async function run(argv, defaultSourceDir) {
 
   for (const target of selected) {
     if (action === 'import') importOne(sourceDir, target);
+    else if (action === 'plugins') pluginsOne(sourceDir, target);
+    else if (action === 'tree') treeOne(sourceDir, target);
     else if (action === 'remove') {
       const hit = removeOne(sourceDir, target, name);
       if (!hit) console.log(`${target.label}: skill not found: ${name}`);

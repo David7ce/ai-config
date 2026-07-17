@@ -1,0 +1,62 @@
+[
+  {
+    "label": "claude plugin marketplace: claude-plugins-official",
+    "command": "claude",
+    "args": ["plugin", "marketplace", "add", "anthropics/claude-plugins-official"]
+  },
+  {
+    "label": "claude plugin marketplace: ponytail",
+    "command": "claude",
+    "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail"]
+  },
+  {
+    "label": "claude plugin marketplace: caveman",
+    "command": "claude",
+    "args": ["plugin", "marketplace", "add", "JuliusBrussee/caveman"]
+  },
+  {
+    "label": "claude plugin marketplace: chrome-devtools-mcp",
+    "command": "claude",
+    "args": ["plugin", "marketplace", "add", "ChromeDevTools/chrome-devtools-mcp"]
+  },
+  {
+    "label": "claude plugin marketplace: obsidian-skills",
+    "command": "claude",
+    "args": ["plugin", "marketplace", "add", "kepano/obsidian-skills"]
+  },
+  {
+    "label": "claude plugin: frontend-design",
+    "command": "claude",
+    "args": ["plugin", "install", "frontend-design@claude-plugins-official", "--scope", "user"]
+  },
+  {
+    "label": "claude plugin: code-simplifier",
+    "command": "claude",
+    "args": ["plugin", "install", "code-simplifier@claude-plugins-official", "--scope", "user"]
+  },
+  {
+    "label": "claude plugin: ponytail",
+    "command": "claude",
+    "args": ["plugin", "install", "ponytail@ponytail", "--scope", "user"]
+  },
+  {
+    "label": "claude plugin: caveman",
+    "command": "claude",
+    "args": ["plugin", "install", "caveman@caveman", "--scope", "user"]
+  },
+  {
+    "label": "claude plugin: chrome-devtools-mcp",
+    "command": "claude",
+    "args": ["plugin", "install", "chrome-devtools-mcp@chrome-devtools-plugins", "--scope", "user"]
+  },
+  {
+    "label": "claude plugin: obsidian",
+    "command": "claude",
+    "args": ["plugin", "install", "obsidian@obsidian-skills", "--scope", "user"]
+  },
+  {
+    "label": "codebase-memory-mcp (installs its own MCP server + Claude Code hooks — see https://github.com/DeusData/codebase-memory-mcp)",
+    "command": "powershell",
+    "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 | iex"]
+  }
+]

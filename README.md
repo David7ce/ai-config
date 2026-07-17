@@ -31,8 +31,12 @@ npx github:David7ce/ai-config --source /path/to/ai-config/.ai
   or `.ai/<tool>/home/`, then re-run the CLI. Never hand-edit the generated copy.
 - MCP servers: edit `.ai/mcp-servers.json`, then `node cli/index.js --mcp`.
 - Applying this machine's dotfiles (currently Claude Code only): `node cli/index.js dotfiles
-  list` / `import` — see [cli/dotfiles.js](cli/dotfiles.js) for flags and the `--home`
-  sandbox option for testing without touching your real profile.
+  list` / `import` / `plugins` / `tree` — see [cli/dotfiles.js](cli/dotfiles.js) for flags
+  and the `--home` sandbox option for testing without touching your real profile. `import`
+  only mirrors files (skills, settings.json); `plugins` runs `installers.json`,
+  package-manager style — `claude plugin install ...` and third-party tool installers —
+  kept as its own step since it hits the network and installs software; `tree` prints the
+  whole `.ai/<tool>/` picture (agents, prompts, skills, plugins) generated from disk.
 
 ## Resources
 

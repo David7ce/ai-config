@@ -141,6 +141,26 @@ async function main() {
     assert.strictEqual(mode, 0o755, 'imported hook script is chmod +x on POSIX');
   }
 
+  // dotfiles plugins — runs {command, args} entries from installers.json. Use `node
+  // --version` (always present, no network, exit 0) instead of a real installer so the
+  // test proves the runner works without actually installing anything.
+  fs.writeFileSync(
+    path.join(sourceDir, 'claude/home/installers.json'),
+    JSON.stringify([{ label: 'demo installer', command: process.execPath, args: ['--version'] }])
+  );
+  await dotfiles.run(['plugins', '--claude', '--home', fakeHome], sourceDir); // just confirm it doesn't throw
+
+  // dotfiles tree — combined project/ + home/ overview, capture stdout to check content
+  const logs = [];
+  const origLog = console.log;
+  console.log = (...a) => logs.push(a.join(' '));
+  await dotfiles.run(['tree', '--claude', '--home', fakeHome], sourceDir);
+  console.log = origLog;
+  const treeOutput = logs.join('\n');
+  assert.match(treeOutput, /project\/agents\//, 'tree shows project/agents/');
+  assert.match(treeOutput, /DemoAgent\.md/, 'tree lists agent files');
+  assert.match(treeOutput, /demo installer/, 'tree expands installers.json labels, not just the filename');
+
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('ok — all checks passed');
 }
