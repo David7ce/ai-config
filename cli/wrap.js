@@ -2,8 +2,8 @@
 // wrap: generates per-tool AI agent config from a project's .ai/ (source of truth).
 // No arrow-key TUI dependency: a plain numbered menu via readline covers "menu" at zero deps
 // and is more reliably cross-platform (Windows terminals + raw mode are a real footgun).
-// Pass flags to skip the menu (scriptable/CI use): --claude --codex --gemini --cursor
-// --windsurf --copilot --mcp --all --target <dir> --source <dir>
+// Pass flags to skip the menu (scriptable/CI use): --claude --codex --opencode --gemini
+// --cursor --windsurf --copilot --mcp --all --target <dir> --source <dir>
 const fs = require('fs');
 const path = require('path');
 const { write, mirrorDir, pickFromMenu } = require('./lib');
@@ -23,9 +23,18 @@ const TARGETS = [
   },
   {
     key: 'codex',
-    label: 'Codex / opencode',
+    label: 'Codex',
     file: 'AGENTS.md',
     generate: (src, targetDir) => [write(targetDir, 'AGENTS.md', genAgentsMd(src))],
+  },
+  {
+    key: 'opencode',
+    label: 'opencode',
+    file: 'AGENTS.md + .opencode/agents, .opencode/commands',
+    generate: (src, targetDir, sourceDir) => [
+      write(targetDir, 'AGENTS.md', genAgentsMd(src)),
+      ...mirrorProjectSubdirs(sourceDir, targetDir, 'opencode', '.opencode'),
+    ],
   },
   {
     key: 'gemini',
@@ -229,7 +238,6 @@ async function run(argv) {
     selected = new Set(TARGETS.map((t) => t.key));
   } else {
     for (const t of TARGETS) if (flags.has(t.key)) selected.add(t.key);
-    if (flags.has('opencode')) selected.add('codex');
   }
 
   if (selected.size === 0 && flags.size === 0) {

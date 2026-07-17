@@ -16,6 +16,8 @@ function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'agents'), { recursive: true });
   fs.mkdirSync(path.join(sourceDir, 'claude/project/agents'), { recursive: true });
   fs.mkdirSync(path.join(sourceDir, 'claude/project/commands'), { recursive: true });
+  fs.mkdirSync(path.join(sourceDir, 'opencode/project/agents'), { recursive: true });
+  fs.mkdirSync(path.join(sourceDir, 'opencode/project/commands'), { recursive: true });
   fs.writeFileSync(path.join(sourceDir, 'instructions.md'), '# Test instructions\n');
   fs.writeFileSync(path.join(sourceDir, 'skills/core/foo.md'), '# foo\n');
   fs.writeFileSync(path.join(sourceDir, 'skills/projects/demo/bar.md'), '# bar\n');
@@ -26,6 +28,14 @@ function buildFixture(sourceDir) {
   );
   fs.writeFileSync(
     path.join(sourceDir, 'claude/project/commands/demo-cmd.md'),
+    '---\ndescription: "Demo command"\n---\n\nDemo command body.\n'
+  );
+  fs.writeFileSync(
+    path.join(sourceDir, 'opencode/project/agents/DemoAgent.md'),
+    '---\nmode: subagent\nmodel: anthropic/demo\n---\n\nDemo agent body.\n'
+  );
+  fs.writeFileSync(
+    path.join(sourceDir, 'opencode/project/commands/demo-cmd.md'),
     '---\ndescription: "Demo command"\n---\n\nDemo command body.\n'
   );
   fs.writeFileSync(
@@ -65,6 +75,11 @@ async function main() {
 
   const agents = fs.readFileSync(path.join(targetDir, 'AGENTS.md'), 'utf8');
   assert.match(agents, /`\.ai\/workflows\/baz\.md`/, 'AGENTS.md references the workflow');
+
+  const ocAgent = fs.readFileSync(path.join(targetDir, '.opencode/agents/DemoAgent.md'), 'utf8');
+  assert.match(ocAgent, /mode: subagent/, '.opencode/agents/ copied verbatim from .ai/opencode/project/agents/');
+  const ocCmd = fs.readFileSync(path.join(targetDir, '.opencode/commands/demo-cmd.md'), 'utf8');
+  assert.match(ocCmd, /Demo command/, '.opencode/commands/ copied verbatim from .ai/opencode/project/commands/');
 
   const gemini = fs.readFileSync(path.join(targetDir, 'GEMINI.md'), 'utf8');
   assert.match(gemini, /Read `AGENTS\.md`/, 'GEMINI.md points at AGENTS.md');
