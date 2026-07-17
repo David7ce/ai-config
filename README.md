@@ -8,11 +8,13 @@ and the human-facing reading material both live outside it, at repo root.
 
 ## Design principle
 
-One source of truth in `.ai/`, and `.ai/` contains *only* AI agent config — no tooling, no
-prose-for-humans. Almost everything at repo root is *generated* — written by the CLI, never
-hand-edited. The two exceptions are hand-authored, tool-specific files that need metadata
-(model, tool list) `.ai/` doesn't model; those live in `.ai/wrappers/<tool>/` and get copied
-out verbatim, still never hand-edited at their final path.
+One source of truth in `.ai/`, and `.ai/` contains *only* AI agent config, organized by
+tool first (`.ai/claude/`, `.ai/github/`, ...), then by where it deploys: `project/` (this
+repo's root, e.g. `.claude/agents/`) vs `home/` (the OS user's home dir, e.g. `~/.claude/`).
+Almost everything at repo root is *generated* — written by the CLI, never hand-edited. The
+files under `<tool>/project/` are the one hand-authored exception, needed for metadata
+(model, tool list) the generic `.ai/skills/`+`.ai/workflows/`+`.ai/agents/` can't model;
+they get copied out verbatim, still never hand-edited at their final path.
 
 ## Structure
 
@@ -22,22 +24,24 @@ out verbatim, still never hand-edited at their final path.
 │                                                        (core + per-project), workflows,
 │                                                        tool-agnostic agent behavior
 ├── mcp-servers.json           ← MCP server definitions (generic schema)
-├── wrappers/<tool>/<path>     ← hand-authored, tool-specific files (model/tools metadata
-│   ├── claude/agents/, claude/commands/               .ai/ can't model) — copied verbatim,
-│   └── github/agents/, github/skills/, github/prompts/ never templated
-└── dotfiles/claude/{skills/, hooks/, settings.json}
-                                ← this machine's ~/.claude — still agent config (Claude's),
-                                  just user-scoped instead of project-scoped. Deliberately
-                                  NOT tracked: plugins/ (9+ MB of cache + marketplace git
-                                  clones — settings.json's enabledPlugins/extraKnownMarketplaces
-                                  drives re-fetching those, no need to duplicate already-
-                                  versioned public repos) and ide/ (per-process .lock files,
-                                  runtime state, not config)
+├── claude/
+│   ├── project/{agents/, commands/}   ← hand-authored, needs metadata .ai/ can't model
+│   │                                     (model, tool list) — copied verbatim to .claude/
+│   └── home/{skills/, hooks/, settings.json}
+│                                ← this machine's ~/.claude — still agent config (Claude's),
+│                                  just user-scoped instead of project-scoped. Deliberately
+│                                  NOT tracked: plugins/ (9+ MB of cache + marketplace git
+│                                  clones — settings.json's enabledPlugins/extraKnownMarketplaces
+│                                  drives re-fetching those, no need to duplicate already-
+│                                  versioned public repos) and ide/ (per-process .lock files,
+│                                  runtime state, not config)
+└── github/
+    └── project/{agents/, skills/, prompts/}   ← copied verbatim to .github/
 
 cli/                            ← the tool, not agent config — stays outside .ai/
 ├── index.js                    ← router: `wrap` (default) | `dotfiles`
-├── wrap.js                     ← generates project config below from .ai/
-├── dotfiles.js                 ← applies .ai/dotfiles/<agent>/ to that agent's home dir
+├── wrap.js                     ← generates project config below from .ai/<tool>/project/
+├── dotfiles.js                 ← applies .ai/<tool>/home/ to that agent's home dir
 │                                  (import-only, multi-agent — see DOTFILE_TARGETS)
 └── lib.js                      ← shared write/mirror/menu helpers
 
@@ -53,8 +57,8 @@ CLAUDE.md, AGENTS.md, GEMINI.md
 .mcp.json, .vscode/mcp.json
 .github/copilot-instructions.md
 .claude/agents/, .claude/commands/, .github/agents/, .github/skills/, .github/prompts/
-                                ← copied verbatim from .ai/wrappers/, not templated, but
-                                  still: edit the .ai/wrappers/ copy, then re-run the CLI
+                                ← copied verbatim from .ai/<tool>/project/, not templated,
+                                  but still: edit the .ai/ copy, then re-run the CLI
 
 package.json                   ← bin: ai-config → cli/index.js (npm needs this at root)
 ```
@@ -80,7 +84,7 @@ node cli/index.js --all
 
 No arrow-key TUI dependency — a plain numbered menu via Node's built-in `readline`, correct
 on every terminal at zero extra installs. Reads `.ai/instructions.md`, `.ai/skills/`,
-`.ai/workflows/`, `.ai/agents/`, `.ai/mcp-servers.json`, `.ai/wrappers/`; doesn't know
+`.ai/workflows/`, `.ai/agents/`, `.ai/mcp-servers.json`, `.ai/<tool>/project/`; doesn't know
 Joomla or Astro, it's generic delivery for whatever's actually in those folders.
 
 - `--target <dir>` — where to write (default: cwd)
@@ -97,7 +101,7 @@ npx github:David7ce/ai-config --source /path/to/ai-config/.ai
 Editing workflow, either repo:
 
 1. Edit rules in `.ai/instructions.md`, `.ai/skills/`, `.ai/workflows/`, `.ai/agents/` — re-run the CLI, every tool picks it up.
-2. Tool-specific metadata (Claude subagent model, Copilot tool list, argument hints): edit the file under `.ai/wrappers/<tool>/`, re-run the CLI. Never hand-edit `.claude/agents/...` etc. directly — it gets overwritten.
+2. Tool-specific metadata (Claude subagent model, Copilot tool list, argument hints): edit the file under `.ai/<tool>/project/`, re-run the CLI. Never hand-edit `.claude/agents/...` etc. directly — it gets overwritten.
 3. MCP servers: edit `.ai/mcp-servers.json` by hand (use `{ "fromEnv": "VAR_NAME" }` for secrets — never inline a token), then `node cli/index.js --mcp`.
 
 ## Applying this machine's dotfiles
@@ -112,10 +116,10 @@ node cli/index.js dotfiles import --all      # mirror into every configured agen
 node cli/index.js dotfiles remove <skill-name> --claude
 ```
 
-Only Claude Code is wired up today (`.ai/dotfiles/claude/` → `~/.claude`, path resolved with
+Only Claude Code is wired up today (`.ai/claude/home/` → `~/.claude`, path resolved with
 Node's `os.homedir()` — correct per OS without the code branching on platform). Adding
 another agent means adding one entry to `DOTFILE_TARGETS` in `cli/dotfiles.js` plus real
-content in `.ai/dotfiles/<agent>/` — deliberately not pre-filled with guessed paths for
+content in `.ai/<agent>/home/` — deliberately not pre-filled with guessed paths for
 Codex/Gemini/opencode/Cursor, since a wrong guess there writes into a real user profile.
 
 **Testing `import` without touching your real profile:** `--home <dir>` redirects where
@@ -127,7 +131,7 @@ node cli/index.js dotfiles import --claude --home ./scratch-home
 ls ./scratch-home/.claude    # inspect the result — your real ~/.claude was never touched
 ```
 
-One direction only, by design: `.ai/dotfiles/claude/` is what you hand-edit (skill files,
+One direction only, by design: `.ai/claude/home/` is what you hand-edit (skill files,
 hook scripts, `settings.json`) — with help, via prompts, rather than through an automated
 capture-from-live step. There's no `export`; nothing in `~/.claude` is ever the source of
 truth. Plugins are just `enabledPlugins`/`extraKnownMarketplaces` inside `settings.json` —

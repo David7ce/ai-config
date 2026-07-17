@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // ai-config — router. `wrap` (default) generates per-tool project config from .ai/.
-// `dotfiles` applies .ai/dotfiles/claude/ to this machine's ~/.claude.
+// `dotfiles` applies .ai/<agent>/home/ to this machine's real user config for that agent.
 const path = require('path');
 const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');

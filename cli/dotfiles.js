@@ -1,18 +1,17 @@
 'use strict';
-// dotfiles: applies .ai/dotfiles/<agent>/ (source of truth) to this machine's real user
-// config for that agent. Multi-agent by design, same pattern as wrap.js's TARGETS — flags
-// or a menu pick which agent(s), same reason (no arrow-key TUI dep, correct on every
-// terminal). One direction only: .ai/dotfiles/<agent>/ is what you hand-edit, never the
-// live homeDir. No export.
+// dotfiles: applies .ai/<agent>/home/ (source of truth) to this machine's real user config
+// for that agent — the counterpart to wrap.js's .ai/<agent>/project/ (repo-scoped instead
+// of user-scoped). Multi-agent by design, same pattern as wrap.js's TARGETS — flags or a
+// menu pick which agent(s), same reason (no arrow-key TUI dep, correct on every terminal).
+// One direction only: .ai/<agent>/home/ is what you hand-edit, never the live homeDir. No export.
 // Only Claude Code is wired up today — its ~/.claude path and shape (skills/, hooks/,
 // settings.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB of cache +
 // marketplace git clones — settings.json's enabledPlugins/extraKnownMarketplaces is what
 // drives re-fetching those, no need to duplicate already-versioned public repos) and ide/
 // (per-process .lock files, pure runtime state, not config).
-// Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once
-// there's real content in .ai/dotfiles/<agent>/ AND a confirmed home-dir path for that
-// tool — don't guess at where another tool's user config lives, a wrong guess here writes
-// into a real profile.
+// Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
+// content in .ai/<agent>/home/ AND a confirmed home-dir path for that tool — don't guess
+// at where another tool's user config lives, a wrong guess here writes into a real profile.
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -52,7 +51,7 @@ async function pickTargets(flags, targets) {
 }
 
 function dotfilesSourceDir(sourceDir, target) {
-  return path.join(sourceDir, 'dotfiles', target.key);
+  return path.join(sourceDir, target.key, 'home');
 }
 
 function listDirNames(dir) {

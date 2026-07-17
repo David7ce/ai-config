@@ -18,7 +18,7 @@ const TARGETS = [
     file: 'CLAUDE.md',
     generate: (src, targetDir, sourceDir) => [
       write(targetDir, 'CLAUDE.md', genClaude(src)),
-      ...mirrorWrapperSubdirs(sourceDir, targetDir, 'claude', '.claude'),
+      ...mirrorProjectSubdirs(sourceDir, targetDir, 'claude', '.claude'),
     ],
   },
   {
@@ -51,7 +51,7 @@ const TARGETS = [
     file: '.github/copilot-instructions.md',
     generate: (src, targetDir, sourceDir) => [
       write(targetDir, '.github/copilot-instructions.md', genCopilot(src)),
-      ...mirrorWrapperSubdirs(sourceDir, targetDir, 'github', '.github'),
+      ...mirrorProjectSubdirs(sourceDir, targetDir, 'github', '.github'),
     ],
   },
   {
@@ -202,10 +202,12 @@ function genMcp(targetDir, sourceDir) {
   return ['.mcp.json', '.vscode/mcp.json'];
 }
 
-// ---- wrapper subtrees (hand-authored, tool-specific — copied verbatim, never templated) ----
+// ---- project subtrees (hand-authored, tool-specific — copied verbatim, never templated) ----
+// .ai/<tool>/project/<name>/ -> <targetDir>/<targetRoot>/<name>/, e.g.
+// .ai/claude/project/agents/ -> .claude/agents/
 
-function mirrorWrapperSubdirs(sourceDir, targetDir, tool, targetRoot) {
-  const srcBase = path.join(sourceDir, 'wrappers', tool);
+function mirrorProjectSubdirs(sourceDir, targetDir, tool, targetRoot) {
+  const srcBase = path.join(sourceDir, tool, 'project');
   if (!fs.existsSync(srcBase)) return [];
   const written = [];
   for (const name of fs.readdirSync(srcBase)) {

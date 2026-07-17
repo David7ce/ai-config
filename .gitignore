@@ -13,5 +13,5 @@
 node_modules/
 
 # Safety net: never let a stray credentials file into the dotfiles source, even by accident.
-.ai/dotfiles/**/.credentials.json
-.ai/dotfiles/**/*.token
+.ai/*/home/**/.credentials.json
+.ai/*/home/**/*.token
