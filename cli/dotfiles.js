@@ -4,8 +4,12 @@
 // or a menu pick which agent(s), same reason (no arrow-key TUI dep, correct on every
 // terminal). One direction only: .ai/dotfiles/<agent>/ is what you hand-edit, never the
 // live homeDir. No export.
-// Only Claude Code is wired up today — its ~/.claude path and shape (skills/, settings.json)
-// are verified. Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once
+// Only Claude Code is wired up today — its ~/.claude path and shape (skills/, hooks/,
+// settings.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB of cache +
+// marketplace git clones — settings.json's enabledPlugins/extraKnownMarketplaces is what
+// drives re-fetching those, no need to duplicate already-versioned public repos) and ide/
+// (per-process .lock files, pure runtime state, not config).
+// Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once
 // there's real content in .ai/dotfiles/<agent>/ AND a confirmed home-dir path for that
 // tool — don't guess at where another tool's user config lives, a wrong guess here writes
 // into a real profile.
@@ -14,13 +18,9 @@ const path = require('path');
 const os = require('os');
 const { mirrorDir, pickFromMenu } = require('./lib');
 
-const DOTFILE_TARGETS = [
-  {
-    key: 'claude',
-    label: 'Claude Code',
-    homeDir: path.join(os.homedir(), '.claude'),
-  },
-];
+// dirName, not a precomputed absolute path: lets --home override where "home" is (see run()),
+// so `import` can be pointed at a scratch dir instead of the real profile for testing.
+const DOTFILE_TARGETS = [{ key: 'claude', label: 'Claude Code', dirName: '.claude' }];
 
 function parseArgs(argv) {
   const flags = new Set();
@@ -28,23 +28,27 @@ function parseArgs(argv) {
   const rest = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--source') opts.source = argv[++i];
+    if (a === '--source' || a === '--home') opts[a.slice(2)] = argv[++i];
     else if (a.startsWith('--')) flags.add(a.slice(2));
     else rest.push(a);
   }
   return { flags, opts, rest };
 }
 
-async function pickTargets(flags) {
-  if (flags.has('all')) return DOTFILE_TARGETS;
-  const byFlag = DOTFILE_TARGETS.filter((t) => flags.has(t.key));
+function resolveTargets(homeBase) {
+  return DOTFILE_TARGETS.map((t) => ({ ...t, homeDir: path.join(homeBase, t.dirName) }));
+}
+
+async function pickTargets(flags, targets) {
+  if (flags.has('all')) return targets;
+  const byFlag = targets.filter((t) => flags.has(t.key));
   if (byFlag.length) return byFlag;
   if (flags.size > 0) return []; // an unrecognized flag was passed — fail safe, don't guess
   const picked = await pickFromMenu(
-    DOTFILE_TARGETS.map((t) => ({ key: t.key, label: t.label, extra: t.homeDir })),
+    targets.map((t) => ({ key: t.key, label: t.label, extra: t.homeDir })),
     'AI Config dotfiles — which agent do you want to import into this machine?'
   );
-  return DOTFILE_TARGETS.filter((t) => picked.has(t.key));
+  return targets.filter((t) => picked.has(t.key));
 }
 
 function dotfilesSourceDir(sourceDir, target) {
@@ -53,6 +57,10 @@ function dotfilesSourceDir(sourceDir, target) {
 
 function listDirNames(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()) : [];
+}
+
+function listFileNames(dir) {
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => fs.statSync(path.join(dir, f)).isFile()) : [];
 }
 
 function showDrift(label, storeItems, liveItems) {
@@ -67,6 +75,7 @@ function listOne(sourceDir, target) {
   console.log(`\n--- ${target.label}: ${dot} (source of truth) vs ${target.homeDir} (this machine) ---`);
 
   showDrift('skills', listDirNames(path.join(dot, 'skills')), listDirNames(path.join(target.homeDir, 'skills')));
+  showDrift('hooks', listFileNames(path.join(dot, 'hooks')), listFileNames(path.join(target.homeDir, 'hooks')));
 
   const storeSettingsFile = path.join(dot, 'settings.json');
   const liveSettingsFile = path.join(target.homeDir, 'settings.json');
@@ -107,6 +116,12 @@ function importOne(sourceDir, target) {
   console.log(`\n${target.label}: ${dot}/skills -> ${target.homeDir}/skills`);
   mirrorDir(path.join(dot, 'skills'), path.join(target.homeDir, 'skills'));
 
+  console.log(`${target.label}: ${dot}/hooks -> ${target.homeDir}/hooks`);
+  const hooksDir = path.join(target.homeDir, 'hooks');
+  if (mirrorDir(path.join(dot, 'hooks'), hooksDir) && process.platform !== 'win32') {
+    for (const f of fs.readdirSync(hooksDir)) fs.chmodSync(path.join(hooksDir, f), 0o755);
+  }
+
   console.log(`${target.label}: settings.json -> ${target.homeDir}`);
   fs.mkdirSync(target.homeDir, { recursive: true });
   const src = path.join(dot, 'settings.json');
@@ -132,15 +147,19 @@ function removeOne(sourceDir, target, name) {
 async function run(argv, defaultSourceDir) {
   const { flags, opts, rest } = parseArgs(argv);
   const sourceDir = path.resolve(opts.source || defaultSourceDir);
+  const homeBase = path.resolve(opts.home || os.homedir());
+  const targets = resolveTargets(homeBase);
   const [action, name] = rest;
 
   if (!['import', 'list', 'remove', undefined].includes(action)) {
-    console.log('usage: ai-config dotfiles <import|list|remove> [--claude|--all] [name] [--source <dir>]');
+    console.log('usage: ai-config dotfiles <import|list|remove> [--claude|--all] [name] [--source <dir>] [--home <dir>]');
     return;
   }
 
-  const targets = await pickTargets(flags);
-  if (targets.length === 0) {
+  if (opts.home) console.log(`(--home override: treating ${homeBase} as the home directory, not ${os.homedir()})`);
+
+  const selected = await pickTargets(flags, targets);
+  if (selected.length === 0) {
     console.log('Nothing selected. Nothing to do.');
     return;
   }
@@ -149,7 +168,7 @@ async function run(argv, defaultSourceDir) {
     throw new Error('usage: ai-config dotfiles remove <skill-name> [--claude|--all]');
   }
 
-  for (const target of targets) {
+  for (const target of selected) {
     if (action === 'import') importOne(sourceDir, target);
     else if (action === 'remove') {
       const hit = removeOne(sourceDir, target, name);

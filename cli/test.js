@@ -65,6 +65,22 @@ async function main() {
   await dotfiles.run(['list', '--claude'], sourceDir);
   await dotfiles.run(['list', '--nonexistent-flag'], sourceDir);
 
+  // dotfiles import — never against the real home in an automated test. --home redirects
+  // it to a scratch dir; this is also the mechanism a human uses to test import safely.
+  fs.mkdirSync(path.join(sourceDir, 'dotfiles/claude/skills/demo-skill'), { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'dotfiles/claude/skills/demo-skill/SKILL.md'), '# demo\n');
+  fs.writeFileSync(path.join(sourceDir, 'dotfiles/claude/settings.json'), '{"model":"test"}\n');
+  const fakeHome = path.join(tmp, 'fake-home');
+  await dotfiles.run(['import', '--claude', '--home', fakeHome], sourceDir);
+  assert.ok(
+    fs.existsSync(path.join(fakeHome, '.claude/skills/demo-skill/SKILL.md')),
+    '--home import writes the skill into the scratch home, not the real one'
+  );
+  assert.ok(
+    fs.existsSync(path.join(fakeHome, '.claude/settings.json')),
+    '--home import writes settings.json into the scratch home'
+  );
+
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('ok — all checks passed');
 }

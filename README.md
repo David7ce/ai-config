@@ -25,12 +25,14 @@ out verbatim, still never hand-edited at their final path.
 ├── wrappers/<tool>/<path>     ← hand-authored, tool-specific files (model/tools metadata
 │   ├── claude/agents/, claude/commands/               .ai/ can't model) — copied verbatim,
 │   └── github/agents/, github/skills/, github/prompts/ never templated
-└── dotfiles/claude/{skills/, settings.json}
+└── dotfiles/claude/{skills/, hooks/, settings.json}
                                 ← this machine's ~/.claude — still agent config (Claude's),
-                                  just user-scoped instead of project-scoped. Plugins aren't
-                                  tracked separately: settings.json's enabledPlugins +
-                                  extraKnownMarketplaces is enough, Claude Code re-fetches
-                                  the rest (installPath/version/commit-sha are local cache)
+                                  just user-scoped instead of project-scoped. Deliberately
+                                  NOT tracked: plugins/ (9+ MB of cache + marketplace git
+                                  clones — settings.json's enabledPlugins/extraKnownMarketplaces
+                                  drives re-fetching those, no need to duplicate already-
+                                  versioned public repos) and ide/ (per-process .lock files,
+                                  runtime state, not config)
 
 cli/                            ← the tool, not agent config — stays outside .ai/
 ├── index.js                    ← router: `wrap` (default) | `dotfiles`
@@ -116,12 +118,22 @@ another agent means adding one entry to `DOTFILE_TARGETS` in `cli/dotfiles.js` p
 content in `.ai/dotfiles/<agent>/` — deliberately not pre-filled with guessed paths for
 Codex/Gemini/opencode/Cursor, since a wrong guess there writes into a real user profile.
 
+**Testing `import` without touching your real profile:** `--home <dir>` redirects where
+"home" is, for every selected target — `import` then mirrors into `<dir>/.claude` instead
+of your real `~/.claude`.
+
+```sh
+node cli/index.js dotfiles import --claude --home ./scratch-home
+ls ./scratch-home/.claude    # inspect the result — your real ~/.claude was never touched
+```
+
 One direction only, by design: `.ai/dotfiles/claude/` is what you hand-edit (skill files,
-`settings.json`) — with help, via prompts, rather than through an automated
+hook scripts, `settings.json`) — with help, via prompts, rather than through an automated
 capture-from-live step. There's no `export`; nothing in `~/.claude` is ever the source of
 truth. Plugins are just `enabledPlugins`/`extraKnownMarketplaces` inside `settings.json` —
 no separate registry to track, Claude Code re-fetches the actual plugin content on next
-start.
+start (this last part is inherited from the previous PowerShell tool's own claim, not
+independently verified this session — worth confirming for real before relying on it).
 
 ## Testing the CLI
 
