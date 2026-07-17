@@ -5,9 +5,9 @@
 // menu pick which agent(s), same reason (no arrow-key TUI dep, correct on every terminal).
 // One direction only: .ai/<agent>/home/ is what you hand-edit, never the live homeDir. No export.
 // Only Claude Code is wired up today — its ~/.claude path and shape (skills/, hooks/,
-// settings.json, installers.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB
+// settings.json, plugins.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB
 // of cache + marketplace git clones) and ide/ (per-process .lock files, pure runtime state,
-// not config) — installers.json (see `plugins` action below) reproduces both on demand
+// not config) — plugins.json (see `plugins` action below) reproduces both on demand
 // instead, package-manager style, so there's nothing to duplicate or go stale.
 // Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
 // content in .ai/<agent>/home/ AND a confirmed home-dir path for that tool — don't guess
@@ -91,9 +91,9 @@ function listOne(sourceDir, target) {
     if (changed.length) console.log(`settings.json — differs on both sides: ${changed.join(', ')}`);
   }
 
-  const installersFile = path.join(dot, 'installers.json');
-  if (fs.existsSync(installersFile) && fs.existsSync(liveSettingsFile)) {
-    const installers = JSON.parse(fs.readFileSync(installersFile, 'utf8'));
+  const pluginsFile = path.join(dot, 'plugins.json');
+  if (fs.existsSync(pluginsFile) && fs.existsSync(liveSettingsFile)) {
+    const installers = JSON.parse(fs.readFileSync(pluginsFile, 'utf8'));
     const claudePlugins = installers
       .filter((i) => i.command === 'claude' && i.args[0] === 'plugin' && i.args[1] === 'install')
       .map((i) => i.args[2]);
@@ -138,7 +138,7 @@ function importOne(sourceDir, target) {
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(target.homeDir, 'settings.json'));
 
   repairAbsolutePaths(target);
-  console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from installers.json.`);
+  console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from plugins.json.`);
 }
 
 // Package-manager style: a labeled list of {command, args} — Claude plugin installs and
@@ -147,9 +147,9 @@ function importOne(sourceDir, target) {
 // "go install things" step (network calls, running remote scripts), same reason winget
 // asks you to type `install` rather than doing it as a side effect of anything else.
 function pluginsOne(sourceDir, target) {
-  const file = path.join(dotfilesSourceDir(sourceDir, target), 'installers.json');
+  const file = path.join(dotfilesSourceDir(sourceDir, target), 'plugins.json');
   if (!fs.existsSync(file)) {
-    console.log(`${target.label}: no installers.json — nothing to install`);
+    console.log(`${target.label}: no plugins.json — nothing to install`);
     return;
   }
   const installers = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -171,7 +171,7 @@ function listMdNames(dir) {
 }
 
 // Everything at a glance: .ai/<tool>/project/ (agents, commands/prompts) + .ai/<tool>/home/
-// (skills, settings, installers.json expanded into its actual marketplace/plugin entries —
+// (skills, settings, plugins.json expanded into its actual marketplace/plugin entries —
 // not just the filename). Generated from disk every run, nothing here to hand-maintain or
 // let go stale.
 function treeOne(sourceDir, target) {
@@ -199,10 +199,10 @@ function treeOne(sourceDir, target) {
     for (const k of Object.keys(JSON.parse(fs.readFileSync(settingsFile, 'utf8')))) console.log(`    ${k}`);
   }
 
-  const installersFile = path.join(home, 'installers.json');
-  if (fs.existsSync(installersFile)) {
-    console.log('  home/installers.json  (plugins — run `dotfiles plugins` to install)');
-    for (const i of JSON.parse(fs.readFileSync(installersFile, 'utf8'))) console.log(`    ${i.label}`);
+  const pluginsFile = path.join(home, 'plugins.json');
+  if (fs.existsSync(pluginsFile)) {
+    console.log('  home/plugins.json  (run `dotfiles plugins` to install)');
+    for (const i of JSON.parse(fs.readFileSync(pluginsFile, 'utf8'))) console.log(`    ${i.label}`);
   }
 }
 
