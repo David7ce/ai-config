@@ -9,7 +9,7 @@ const dotfiles = require('./dotfiles');
 async function main() {
   const argv = process.argv.slice(2);
   if (argv[0] === 'dotfiles') {
-    const defaultSourceDir = path.join(__dirname, '..'); // .ai/ this CLI ships from
+    const defaultSourceDir = path.join(__dirname, '..', '.ai'); // .ai/ next to this CLI
     await dotfiles.run(argv.slice(1), defaultSourceDir);
   } else {
     await wrap.run(argv[0] === 'wrap' ? argv.slice(1) : argv);
