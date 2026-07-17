@@ -11,3 +11,7 @@
 /.vscode/
 
 node_modules/
+
+# Safety net: never let a stray credentials file into the dotfiles source, even by accident.
+.ai/dotfiles/**/.credentials.json
+.ai/dotfiles/**/*.token

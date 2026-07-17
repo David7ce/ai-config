@@ -1,3 +1,7 @@
+---
+description: "Use when: Joomla implementation, refactor, review, or testing tasks. Full workflow in .ai/workflows/joomlagen-workflow.md."
+---
+
 # JoomlaGen Workflow
 
 Use this workflow for Joomla development, refactoring, review, or testing tasks.

@@ -3,14 +3,16 @@
 // One direction only, by design: edit .ai/dotfiles/claude/ by hand (with help, via prompts),
 // run `import` to apply it. No export/capture-back — ~/.claude is never hand-edited as the
 // source, .ai/dotfiles/claude/ always is. Mirrors: destination extras get deleted on import.
+// Plugins aren't tracked as a separate registry: settings.json's enabledPlugins +
+// extraKnownMarketplaces is enough — Claude Code re-fetches the actual plugin content from
+// those marketplaces on next start. installPath/version/commit-sha are machine-local cache,
+// not source of truth, so they don't belong here.
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { mirrorDir } = require('./lib');
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
-const REGISTRY_FILES = ['installed_plugins.json', 'known_marketplaces.json'];
-const CONFIG_FILES = ['settings.json', 'statusline-combined.ps1']; // never .credentials.json
 
 function parseArgs(argv) {
   const opts = {};
@@ -31,12 +33,6 @@ function listDirNames(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()) : [];
 }
 
-function pluginNames(file) {
-  if (!fs.existsSync(file)) return [];
-  const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-  return Object.keys(json.plugins || {});
-}
-
 function showDrift(label, storeItems, liveItems) {
   const missing = storeItems.filter((i) => !liveItems.includes(i));
   const extra = liveItems.filter((i) => !storeItems.includes(i));
@@ -49,12 +45,6 @@ function list(sourceDir) {
   console.log('--- drift: .ai/dotfiles/claude (source of truth) vs ~/.claude (this machine) ---');
 
   showDrift('skills', listDirNames(path.join(dot, 'skills')), listDirNames(path.join(CLAUDE_DIR, 'skills')));
-
-  showDrift(
-    'plugins',
-    pluginNames(path.join(dot, 'plugins', 'installed_plugins.json')),
-    pluginNames(path.join(CLAUDE_DIR, 'plugins', 'installed_plugins.json'))
-  );
 
   const storeSettingsFile = path.join(dot, 'settings.json');
   const liveSettingsFile = path.join(CLAUDE_DIR, 'settings.json');
@@ -71,21 +61,19 @@ function list(sourceDir) {
   }
 }
 
-// Registries and settings.json carry absolute paths from the source machine (installPath,
-// installLocation, statusLine command) — rewrite every "<anything>...\.claude" prefix to
-// the current home dir. Matches JSON-escaped Windows (C:\\Users\\x\\.claude) and Linux forms.
+// settings.json can carry an absolute path from the source machine (e.g. a statusLine
+// command) — rewrite every "<anything>...\.claude" prefix to the current home dir. Matches
+// JSON-escaped Windows (C:\\Users\\x\\.claude) and Linux forms.
 function repairAbsolutePaths() {
-  const targets = [...REGISTRY_FILES.map((f) => path.join(CLAUDE_DIR, 'plugins', f)), path.join(CLAUDE_DIR, 'settings.json')];
+  const file = path.join(CLAUDE_DIR, 'settings.json');
+  if (!fs.existsSync(file)) return;
   const claudeEsc = CLAUDE_DIR.replace(/\\/g, '\\\\');
   const pattern = /(?:[A-Za-z]:(?:\\\\|\/)|\/)[^":]*?(?:\\\\|\/)\.claude/g;
-  for (const file of targets) {
-    if (!fs.existsSync(file)) continue;
-    const raw = fs.readFileSync(file, 'utf8');
-    const fixed = raw.replace(pattern, claudeEsc);
-    if (fixed !== raw) {
-      fs.writeFileSync(file, fixed);
-      console.log(`${path.basename(file)}: absolute paths rewritten to ${CLAUDE_DIR}`);
-    }
+  const raw = fs.readFileSync(file, 'utf8');
+  const fixed = raw.replace(pattern, claudeEsc);
+  if (fixed !== raw) {
+    fs.writeFileSync(file, fixed);
+    console.log(`settings.json: absolute paths rewritten to ${CLAUDE_DIR}`);
   }
 }
 
@@ -96,19 +84,10 @@ function importDotfiles(sourceDir) {
   console.log(`skills: ${dot}/skills -> ${CLAUDE_DIR}/skills`);
   mirrorDir(path.join(dot, 'skills'), path.join(CLAUDE_DIR, 'skills'));
 
-  console.log('plugins: registries -> ~/.claude/plugins');
-  fs.mkdirSync(path.join(CLAUDE_DIR, 'plugins'), { recursive: true });
-  for (const f of REGISTRY_FILES) {
-    const src = path.join(dot, 'plugins', f);
-    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(CLAUDE_DIR, 'plugins', f));
-  }
-
-  console.log('config: -> ~/.claude');
+  console.log('config: settings.json -> ~/.claude');
   fs.mkdirSync(CLAUDE_DIR, { recursive: true });
-  for (const f of CONFIG_FILES) {
-    const src = path.join(dot, f);
-    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(CLAUDE_DIR, f));
-  }
+  const src = path.join(dot, 'settings.json');
+  if (fs.existsSync(src)) fs.copyFileSync(src, path.join(CLAUDE_DIR, 'settings.json'));
 
   repairAbsolutePaths();
   console.log('done. Skills active now; plugins re-fetch from their marketplaces on next Claude Code start (check with /plugin).');

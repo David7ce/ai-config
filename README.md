@@ -25,9 +25,12 @@ out verbatim, still never hand-edited at their final path.
 ├── wrappers/<tool>/<path>     ← hand-authored, tool-specific files (model/tools metadata
 │   ├── claude/agents/, claude/commands/               .ai/ can't model) — copied verbatim,
 │   └── github/agents/, github/skills/, github/prompts/ never templated
-└── dotfiles/claude/{skills/, plugins/, settings.json, statusline-combined.ps1}
+└── dotfiles/claude/{skills/, settings.json}
                                 ← this machine's ~/.claude — still agent config (Claude's),
-                                  just user-scoped instead of project-scoped
+                                  just user-scoped instead of project-scoped. Plugins aren't
+                                  tracked separately: settings.json's enabledPlugins +
+                                  extraKnownMarketplaces is enough, Claude Code re-fetches
+                                  the rest (installPath/version/commit-sha are local cache)
 
 cli/                            ← the tool, not agent config — stays outside .ai/
 ├── index.js                    ← router: `wrap` (default) | `dotfiles`
@@ -103,9 +106,21 @@ node cli/index.js dotfiles remove <skill-name>
 ```
 
 One direction only, by design: `.ai/dotfiles/claude/` is what you hand-edit (skill files,
-`settings.json`, the plugin registry) — with help, via prompts, rather than through an
-automated capture-from-live step. There's no `export`; nothing in `~/.claude` is ever the
-source of truth.
+`settings.json`) — with help, via prompts, rather than through an automated
+capture-from-live step. There's no `export`; nothing in `~/.claude` is ever the source of
+truth. Plugins are just `enabledPlugins`/`extraKnownMarketplaces` inside `settings.json` —
+no separate registry to track, Claude Code re-fetches the actual plugin content on next
+start.
+
+## Testing the CLI
+
+```sh
+npm test    # or: node cli/test.js
+```
+
+Smoke test, not a suite — builds a throwaway `.ai/` in a temp dir, runs `wrap` and checks
+the generated files and MCP env-placeholder translation, then confirms `dotfiles list`
+(read-only) doesn't throw. Run it after touching anything in `cli/`.
 
 ## Model guidance
 

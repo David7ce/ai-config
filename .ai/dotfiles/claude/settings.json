@@ -1,37 +1,14 @@
 {
-  "permissions": {
-    "allow": [
-      "mcp__pencil",
-      "Bash(pnpm run typecheck)",
-      "PowerShell(pnpm run typecheck)",
-      "Bash(pnpm lint)",
-      "PowerShell(pnpm lint)",
-      "Bash(./node_modules/.bin/astro check *)"
-    ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\d7\\.claude\\statusline-combined.ps1\""
-  },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "skill-creator@claude-plugins-official": true,
-    "caveman@caveman": true,
-    "superpowers@claude-plugins-official": true,
-    "chrome-devtools-mcp@claude-plugins-official": true,
-    "ruview@ruview": true
+    "code-simplifier@claude-plugins-official": true,
+    "ponytail@ponytail": true
   },
   "extraKnownMarketplaces": {
-    "caveman": {
+    "claude-plugins-official": {
       "source": {
         "source": "github",
-        "repo": "juliusbrussee/caveman"
-      }
-    },
-    "ruview": {
-      "source": {
-        "source": "github",
-        "repo": "ruvnet/RuView"
+        "repo": "anthropics/claude-plugins-official"
       }
     },
     "ponytail": {
@@ -41,6 +18,58 @@
       }
     }
   },
-  "effortLevel": "xhigh",
-  "theme": "dark"
+  "effortLevel": "high",
+  "model": "sonnet",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cbm-code-discovery-gate",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cbm-session-reminder"
+          }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cbm-session-reminder"
+          }
+        ]
+      },
+      {
+        "matcher": "clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cbm-session-reminder"
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cbm-session-reminder"
+          }
+        ]
+      }
+    ]
+  }
 }

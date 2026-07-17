@@ -1,3 +1,7 @@
+---
+description: "Use when: reviewing code for architecture, security, and quality issues against DoD."
+---
+
 # Review Command
 
 Run a structured technical review of the current change or specified files.

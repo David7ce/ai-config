@@ -9,14 +9,57 @@ const path = require('path');
 const readline = require('readline');
 const { write, mirrorDir } = require('./lib');
 
+// Each entry is everything there is to know about one target: label + path for the menu,
+// generate() for `run()`. Adding a tool means adding one entry here — nowhere else.
 const AGENTS = [
-  { key: 'claude', label: 'Claude Code', file: 'CLAUDE.md' },
-  { key: 'codex', label: 'Codex / opencode', file: 'AGENTS.md' },
-  { key: 'gemini', label: 'Gemini CLI', file: 'GEMINI.md' },
-  { key: 'cursor', label: 'Cursor', file: '.cursor/rules/project.mdc' },
-  { key: 'windsurf', label: 'Windsurf', file: '.windsurfrules' },
-  { key: 'copilot', label: 'GitHub Copilot', file: '.github/copilot-instructions.md' },
-  { key: 'mcp', label: 'MCP servers', file: '.mcp.json + .vscode/mcp.json' },
+  {
+    key: 'claude',
+    label: 'Claude Code',
+    file: 'CLAUDE.md',
+    generate: (src, targetDir, sourceDir) => [
+      write(targetDir, 'CLAUDE.md', genClaude(src)),
+      ...mirrorWrapperSubdirs(sourceDir, targetDir, 'claude', '.claude'),
+    ],
+  },
+  {
+    key: 'codex',
+    label: 'Codex / opencode',
+    file: 'AGENTS.md',
+    generate: (src, targetDir) => [write(targetDir, 'AGENTS.md', genAgentsMd(src))],
+  },
+  {
+    key: 'gemini',
+    label: 'Gemini CLI',
+    file: 'GEMINI.md',
+    generate: (src, targetDir) => [write(targetDir, 'GEMINI.md', genGemini())],
+  },
+  {
+    key: 'cursor',
+    label: 'Cursor',
+    file: '.cursor/rules/project.mdc',
+    generate: (src, targetDir) => [write(targetDir, '.cursor/rules/project.mdc', genCursor(src))],
+  },
+  {
+    key: 'windsurf',
+    label: 'Windsurf',
+    file: '.windsurfrules',
+    generate: (src, targetDir) => [write(targetDir, '.windsurfrules', genWindsurf(src))],
+  },
+  {
+    key: 'copilot',
+    label: 'GitHub Copilot',
+    file: '.github/copilot-instructions.md',
+    generate: (src, targetDir, sourceDir) => [
+      write(targetDir, '.github/copilot-instructions.md', genCopilot(src)),
+      ...mirrorWrapperSubdirs(sourceDir, targetDir, 'github', '.github'),
+    ],
+  },
+  {
+    key: 'mcp',
+    label: 'MCP servers',
+    file: '.mcp.json + .vscode/mcp.json',
+    generate: (src, targetDir, sourceDir) => genMcp(targetDir, sourceDir),
+  },
 ];
 
 function parseArgs(argv) {
@@ -215,19 +258,9 @@ async function run(argv) {
 
   const src = readSource(sourceDir);
   const written = [];
-  if (selected.has('claude')) {
-    written.push(write(targetDir, 'CLAUDE.md', genClaude(src)));
-    written.push(...mirrorWrapperSubdirs(sourceDir, targetDir, 'claude', '.claude'));
+  for (const agent of AGENTS) {
+    if (selected.has(agent.key)) written.push(...agent.generate(src, targetDir, sourceDir));
   }
-  if (selected.has('codex')) written.push(write(targetDir, 'AGENTS.md', genAgentsMd(src)));
-  if (selected.has('gemini')) written.push(write(targetDir, 'GEMINI.md', genGemini()));
-  if (selected.has('cursor')) written.push(write(targetDir, '.cursor/rules/project.mdc', genCursor(src)));
-  if (selected.has('windsurf')) written.push(write(targetDir, '.windsurfrules', genWindsurf(src)));
-  if (selected.has('copilot')) {
-    written.push(write(targetDir, '.github/copilot-instructions.md', genCopilot(src)));
-    written.push(...mirrorWrapperSubdirs(sourceDir, targetDir, 'github', '.github'));
-  }
-  if (selected.has('mcp')) written.push(...genMcp(targetDir, sourceDir));
 
   console.log(`\n✓ wrote ${written.length} item(s) to ${targetDir}:`);
   for (const f of written) console.log(`  - ${f}`);
