@@ -31,15 +31,10 @@ Curated resources for AI agent configuration, skills, and prompt engineering.
 - [mcpservers.org](https://mcpservers.org/) — MCP server directory
 - [MCP Market](https://mcpmarket.com/) — MCP server directory
 - [MCP Repository](https://mcprepository.com/) — MCP server directory
+- [LobeHub MCP](https://lobehub.com/mcp) — MCP server directory
 - [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) — Drive a real Chrome instance from an agent
 - [playwright-mcp](https://github.com/microsoft/playwright-mcp) — Browser automation over MCP
 - [Agent-Reach](https://github.com/Panniantong/Agent-Reach) — Read Twitter/Reddit/YouTube/GitHub without API fees
-
-## Context & Memory
-
-- [caveman](https://github.com/juliusbrussee/caveman) — Compresses agent output/instructions to cut tokens
-- [pxpipe](https://github.com/teamchong/pxpipe) — Renders text context as images to cut tokens
-- [codebase-memory-mcp](https://deusdata.github.io/codebase-memory-mcp/) — Persistent knowledge graph of a codebase; structural queries at ~120x fewer tokens than file-by-file reads
 
 ## Plugins & Marketplaces
 
@@ -48,6 +43,12 @@ Curated resources for AI agent configuration, skills, and prompt engineering.
 - [claudemarketplaces.com](https://claudemarketplaces.com/) — Plugin directory
 - [HOL Registry](https://hol.org/registry/plugins) — Multi-model plugin registry (Claude/Codex/Grok/Gemini)
 - [garrytan/gstack](https://github.com/garrytan/gstack) — 23-tool opinionated Claude Code plugin setup
+
+## Context & Memory
+
+- [caveman](https://github.com/juliusbrussee/caveman) — Compresses agent output/instructions to cut tokens
+- [pxpipe](https://github.com/teamchong/pxpipe) — Renders text context as images to cut tokens
+- [codebase-memory-mcp](https://deusdata.github.io/codebase-memory-mcp/) — Persistent knowledge graph of a codebase; structural queries at ~120x fewer tokens than file-by-file reads
 
 ## Design & Frontend
 
