@@ -187,6 +187,30 @@ async function main() {
     assert.strictEqual(mode, 0o755, 'imported hook script is chmod +x on POSIX');
   }
 
+  // dotfiles remove — unlike import/list/plugins/tree, this deletes from the *source*
+  // (skills/personal/) unconditionally; --home only redirects where the live copy is, it
+  // does NOT sandbox the source. That makes sourceDir being a disposable tmp dir (not the
+  // real .ai/) the only thing standing between this test and deleting a real personal skill
+  // — confirmed the hard way once already. Never run `remove` against the real sourceDir.
+  // Uses its own skill (not demo-skill, which later assertions still need) — imported
+  // first so both the source and the live copy exist for remove to delete.
+  fs.mkdirSync(path.join(sourceDir, 'skills/personal/removable-skill'), { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'skills/personal/removable-skill/SKILL.md'), '# removable\n');
+  await dotfiles.run(['import', '--claude', '--home', fakeHome], sourceDir);
+  await dotfiles.run(['remove', 'removable-skill', '--claude', '--home', fakeHome], sourceDir);
+  assert.ok(
+    !fs.existsSync(path.join(sourceDir, 'skills/personal/removable-skill')),
+    'remove deletes the skill from the source (skills/personal/), not just the live copy'
+  );
+  assert.ok(
+    !fs.existsSync(path.join(fakeHome, '.claude/skills/removable-skill')),
+    'remove also deletes the skill from the live copy at --home'
+  );
+  assert.ok(
+    fs.existsSync(path.join(sourceDir, 'skills/personal/demo-skill')),
+    "remove only deletes the named skill, doesn't touch others"
+  );
+
   // dotfiles plugins — runs each package's {agent, command, args} install steps from
   // plugins.json (tool-agnostic — a step can be `claude plugin install ...` or
   // `codex mcp add ...` just as well; a package with steps for more than one agent is one

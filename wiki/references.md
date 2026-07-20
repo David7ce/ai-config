@@ -73,7 +73,8 @@ Curated resources for AI agent configuration, skills, and prompt engineering.
 
 - [ai-agent-basics.md](ai-agent-basics.md) — six-block framing (Context,
   Memory, Connectors, Skills, Plugins, Harness) this list's tool picks are partly curated from
-- [claude-skills-sync/](claude-skills-sync/README.md) — PowerShell import/export for
-  `~/.claude/{skills,plugins,settings.json}` across machines; `store/` in this repo is the
-  source of truth, git is the DB (different concern than this repo's project-embedded
-  `.ai/skills/`)
+- [cli/dotfiles.js](../cli/dotfiles.js) — this repo's own Claude Code dotfiles sync
+  (`node cli/index.js dotfiles list|import|plugins|tree`), replacing an earlier PowerShell
+  `claude-skills-sync/` tool; `.ai/skills/personal/` and `.ai/plugins.json` are the source
+  of truth, git is the DB (different concern than this repo's project-embedded
+  `.ai/skills/{core,projects}/`)

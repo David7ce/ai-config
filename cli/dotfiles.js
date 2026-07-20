@@ -244,6 +244,9 @@ function treeOne(sourceDir, target) {
   }
 }
 
+// Unlike every other action here, this deletes from sourceDir for real — --home only
+// redirects target.homeDir (the live copy), it does not sandbox the source. Testing this
+// against the real .ai/ deletes a real personal skill; always pass a throwaway sourceDir.
 function removeOne(sourceDir, target, name) {
   let hit = false;
   for (const dir of [path.join(personalSkillsDir(sourceDir), name), path.join(target.homeDir, 'skills', name)]) {
