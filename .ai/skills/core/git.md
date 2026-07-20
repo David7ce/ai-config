@@ -48,7 +48,7 @@ Define git conventions to keep history readable, changes reversible, and reviews
 ## 6. Correct examples
 
 ```sh
-git commit -m "Fix: escape HTML output in default.php article override"
-git commit -m "Add: lazy-load AJAX strategy for municipios.json"
-git commit -m "Refactor: split map.js into markers.js and layers.js"
+git commit -m "Fix: escape HTML output in the comment form"
+git commit -m "Add: retry with backoff for the upload endpoint"
+git commit -m "Refactor: split parser.js into tokenizer.js and ast.js"
 ```

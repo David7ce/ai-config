@@ -23,20 +23,66 @@ To use this on another project: `cd` there and point `--source` at this repo's `
 npx github:David7ce/ai-config --source /path/to/ai-config/.ai
 ```
 
+## Building blocks
+
+`.ai/` speaks the vocabulary every agentic tool shares today. Each concept has exactly one
+generic source of truth; the CLI materializes it into each tool's native shape.
+
+| Concept | Source of truth | Materialized as |
+|---|---|---|
+| **Instructions** | `.ai/instructions.md`, `.ai/skills/core/*.md` | `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules/`, `.windsurfrules`, `.github/copilot-instructions.md` — always loaded, every session |
+| **Skills** | `.ai/skills/projects/<name>/*.md` (project, in-repo) and `.ai/skills/personal/<name>/SKILL.md` (personal, machine-wide) | Project skills → `.claude/skills/<name>/SKILL.md` on Claude Code, discovered and loaded only when the task matches (a plain file reference on tools without on-demand loading); personal skills → `~/.claude/skills/` via `dotfiles import` |
+| **Agents** | `.ai/agents/<name>.md` (behavior, tool-agnostic) + optional `.ai/agents/<name>.json` (the per-tool bits that can't be derived: model IDs, tool-name vocab) | `.claude/agents/`, `.opencode/agents/`, `.github/agents/` — generated, not hand-copied per tool |
+| **Prompts** | `.ai/prompts/*.md` (flat frontmatter: `title`, `description`, optional `agent`/`checklist`) | `.claude/commands/`, `.opencode/commands/`, `.github/prompts/` — generated; one exception, `.ai/prompts/*.prompt.md` (the double extension is the marker), a Copilot-only fill-in-the-blank template copied verbatim since it has no generic source to derive from |
+| **MCP Servers** | `.ai/mcp-servers.json` (project-scoped: stdio servers this project needs) | `.mcp.json`, `.vscode/mcp.json` |
+| **Hooks** | `.ai/claude-hooks/` | `~/.claude/hooks/` via `dotfiles import` — event-triggered scripts, Claude Code only (no equivalent wired up for other tools yet) |
+| **Plugins** | `.ai/plugins.json` (machine-scoped, tool-agnostic — a package-manager-style `{label, command, args}` list) | run via `dotfiles plugins` — `claude plugin install ...`, but just as well `claude mcp add ...` / `codex mcp add ...` for machine-wide MCP servers (several CLIs share this subcommand), or any other one-time setup command |
+
+MCP Servers and Plugins can both end up registering an MCP server, but at different scope:
+`mcp-servers.json` is *this project's* servers, shared via git, materialized into
+`.mcp.json` for whoever clones the repo. `plugins.json` is *your machine's* servers —
+`codex mcp add` (and similar) has no project scope to target, so a personal, always-available
+MCP server belongs there instead, run once per machine like any other installer entry.
+
+Instructions and Skills are both markdown rule files but behave differently: `skills/core/`
+is unconditional context on every session; `skills/projects/<name>/` and
+`skills/personal/<name>/` are conditional — they should only cost context when the task
+actually matches. All three sit under one `.ai/skills/` tree; what differs is *scope*
+(always / this project / this machine) and *mechanism* (`wrap.js` for the first two,
+`dotfiles.js` for the third) — not the file format.
+
+`.ai/` itself stays flat, not nested per tool: content that's actually portable (skills,
+agents, prompts, MCP servers, plugins/installers) sits at the root regardless of which
+tool ends up reading it. The one thing that's genuinely tool-specific and not portable —
+Claude Code's own `settings.json` shape (`effortLevel`, `hooks`, `enabledPlugins`, ...) —
+gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.json`,
+`.ai/claude-hooks/`), honest about scope without needing a directory for it.
+
 ## Editing
 
-- Rules, skills, workflows, agent behavior: edit `.ai/instructions.md`, `.ai/skills/`,
-  `.ai/workflows/`, `.ai/agents/`, then re-run the CLI.
-- Tool-specific metadata (subagent model, tool list, hooks): edit under `.ai/<tool>/project/`
-  or `.ai/<tool>/home/`, then re-run the CLI. Never hand-edit the generated copy.
-- MCP servers: edit `.ai/mcp-servers.json`, then `node cli/index.js --mcp`.
+- Rules, always-on skills, agent behavior: edit `.ai/instructions.md`, `.ai/skills/core/`,
+  `.ai/agents/`, then re-run the CLI.
+- Task-scoped project skills, prompts: edit `.ai/skills/projects/<name>/`, `.ai/prompts/`,
+  then re-run the CLI.
+- Personal skills (yours, machine-wide, not tied to any project): edit
+  `.ai/skills/personal/<name>/SKILL.md`, then `dotfiles import`.
+- Agent behavior: edit `.ai/agents/<name>.md`. Per-tool model/tool-list: edit the matching
+  `.ai/agents/<name>.json` (only add the tool blocks you need). Then re-run the CLI — never
+  hand-edit `.claude/agents/`, `.opencode/agents/`, or `.github/agents/` directly, they're
+  regenerated every run.
+- Home-scope tool config: edit `.ai/<tool>-settings.json` / `.ai/<tool>-hooks/`, then
+  `dotfiles import`.
+- Machine-wide installers (Claude plugins, `mcp add` registrations, any other one-time
+  setup command): edit `.ai/plugins.json`, then `dotfiles plugins`.
+- Project-scoped MCP servers (this project's, shared via git): edit `.ai/mcp-servers.json`,
+  then `node cli/index.js --mcp`.
 - Applying this machine's dotfiles (currently Claude Code only): `node cli/index.js dotfiles
   list` / `import` / `plugins` / `tree` — see [cli/dotfiles.js](cli/dotfiles.js) for flags
   and the `--home` sandbox option for testing without touching your real profile. `import`
-  only mirrors files (skills, settings.json); `plugins` runs `plugins.json`,
-  package-manager style — `claude plugin install ...` and third-party tool installers —
-  kept as its own step since it hits the network and installs software; `tree` prints the
-  whole `.ai/<tool>/` picture (agents, prompts, skills, plugins) generated from disk.
+  only mirrors files (personal skills, settings.json); `plugins` runs `.ai/plugins.json`,
+  package-manager style, kept as its own step since it hits the network and installs
+  software or registers MCP servers; `tree` prints this machine's home-scope picture
+  (personal skills, settings, plugins) generated from disk.
 
 ## Resources
 

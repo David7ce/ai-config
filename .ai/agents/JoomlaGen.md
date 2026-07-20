@@ -17,7 +17,7 @@ Use this agent for:
 
 ## Operating rules
 
-- Always follow repository architecture and security constraints from `.ai/skills/core/architecture.md`.
+- Always follow repository architecture and security constraints from `.ai/skills/projects/joomla/architecture.md`.
 - Prefer minimal, reversible, low-risk changes.
 - Do not introduce large structural changes without explicit approval.
 - Use only allowed mapping libraries (Leaflet and OpenStreetMap).
@@ -26,4 +26,4 @@ Use this agent for:
 
 Detailed execution workflow is defined in:
 
-- `.ai/workflows/joomlagen-workflow.md`
+- `.ai/prompts/joomlagen-workflow.md`

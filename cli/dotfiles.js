@@ -1,17 +1,25 @@
 'use strict';
-// dotfiles: applies .ai/<agent>/home/ (source of truth) to this machine's real user config
-// for that agent — the counterpart to wrap.js's .ai/<agent>/project/ (repo-scoped instead
-// of user-scoped). Multi-agent by design, same pattern as wrap.js's TARGETS — flags or a
-// menu pick which agent(s), same reason (no arrow-key TUI dep, correct on every terminal).
-// One direction only: .ai/<agent>/home/ is what you hand-edit, never the live homeDir. No export.
-// Only Claude Code is wired up today — its ~/.claude path and shape (skills/, hooks/,
-// settings.json, plugins.json) are verified. Deliberately NOT tracked: plugins/ (9+ MB
-// of cache + marketplace git clones) and ide/ (per-process .lock files, pure runtime state,
-// not config) — plugins.json (see `plugins` action below) reproduces both on demand
-// instead, package-manager style, so there's nothing to duplicate or go stale.
+// dotfiles: applies this machine's slice of .ai/ (source of truth) to the real user
+// config for each tool — machine-scoped, the counterpart to wrap.js's project-scoped
+// generation (repo-local instead of user-scope). Multi-agent by design, same pattern as
+// wrap.js's TARGETS — flags or a menu pick which agent(s), same reason (no arrow-key TUI
+// dep, correct on every terminal). One direction only: these are what you hand-edit, never
+// the live homeDir. No export.
+// Everything here is flat under .ai/ (no <tool>/home/ nesting — there's no <tool>/project/
+// left to disambiguate "home" from, see cli/wrap.js): tool-agnostic content sits at the
+// root (skills/personal/, plugins.json — see their own comments for why), genuinely
+// per-tool-schema content is a <key>-prefixed file instead of a subfolder
+// (claude-settings.json, claude-hooks/) — settings.json's shape (effortLevel, hooks,
+// enabledPlugins, ...) is Claude Code's own, not portable, so the prefix is honest about
+// scope without needing a directory for it.
+// Only Claude Code is wired up today — its ~/.claude path and shape are verified.
+// Deliberately NOT tracked: plugins/ (9+ MB of cache + marketplace git clones) and ide/
+// (per-process .lock files, pure runtime state, not config) — plugins.json (see `plugins`
+// action below) reproduces both on demand instead, package-manager style, so there's
+// nothing to duplicate or go stale.
 // Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
-// content in .ai/<agent>/home/ AND a confirmed home-dir path for that tool — don't guess
-// at where another tool's user config lives, a wrong guess here writes into a real profile.
+// content for that tool AND a confirmed home-dir path — don't guess at where another
+// tool's user config lives, a wrong guess here writes into a real profile.
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -51,8 +59,27 @@ async function pickTargets(flags, targets) {
   return targets.filter((t) => picked.has(t.key));
 }
 
-function dotfilesSourceDir(sourceDir, target) {
-  return path.join(sourceDir, target.key, 'home');
+// Genuinely per-tool schema (Claude Code's own settings.json shape) — a <key>-prefixed
+// flat file, not a subfolder (see header comment).
+function settingsFile(sourceDir, target) {
+  return path.join(sourceDir, `${target.key}-settings.json`);
+}
+
+function sourceHooksDir(sourceDir, target) {
+  return path.join(sourceDir, `${target.key}-hooks`);
+}
+
+// Tool-agnostic — flat at the .ai/ root, same reasoning as skills/core and skills/projects
+// living outside any one tool's tree (see header comment).
+function personalSkillsDir(sourceDir) {
+  return path.join(sourceDir, 'skills', 'personal');
+}
+
+// Also tool-agnostic — see header comment. Not nested under any one tool's files because
+// its entries aren't all about one tool (a `codex mcp add ...` entry is just as much at
+// home here as a `claude plugin install ...` one).
+function personalPluginsFile(sourceDir) {
+  return path.join(sourceDir, 'plugins.json');
 }
 
 function listDirNames(dir) {
@@ -71,13 +98,16 @@ function showDrift(label, storeItems, liveItems) {
 }
 
 function listOne(sourceDir, target) {
-  const dot = dotfilesSourceDir(sourceDir, target);
-  console.log(`\n--- ${target.label}: ${dot} (source of truth) vs ${target.homeDir} (this machine) ---`);
+  console.log(`\n--- ${target.label}: .ai/ (source of truth) vs ${target.homeDir} (this machine) ---`);
 
-  showDrift('skills', listDirNames(path.join(dot, 'skills')), listDirNames(path.join(target.homeDir, 'skills')));
-  showDrift('hooks', listFileNames(path.join(dot, 'hooks')), listFileNames(path.join(target.homeDir, 'hooks')));
+  showDrift('skills', listDirNames(personalSkillsDir(sourceDir)), listDirNames(path.join(target.homeDir, 'skills')));
+  showDrift(
+    'hooks',
+    listFileNames(sourceHooksDir(sourceDir, target)),
+    listFileNames(path.join(target.homeDir, 'hooks'))
+  );
 
-  const storeSettingsFile = path.join(dot, 'settings.json');
+  const storeSettingsFile = settingsFile(sourceDir, target);
   const liveSettingsFile = path.join(target.homeDir, 'settings.json');
   if (fs.existsSync(storeSettingsFile) && fs.existsSync(liveSettingsFile)) {
     const store = JSON.parse(fs.readFileSync(storeSettingsFile, 'utf8'));
@@ -91,7 +121,7 @@ function listOne(sourceDir, target) {
     if (changed.length) console.log(`settings.json — differs on both sides: ${changed.join(', ')}`);
   }
 
-  const pluginsFile = path.join(dot, 'plugins.json');
+  const pluginsFile = personalPluginsFile(sourceDir);
   if (fs.existsSync(pluginsFile) && fs.existsSync(liveSettingsFile)) {
     const installers = JSON.parse(fs.readFileSync(pluginsFile, 'utf8'));
     const claudePlugins = installers
@@ -120,22 +150,25 @@ function repairAbsolutePaths(target) {
 }
 
 function importOne(sourceDir, target) {
-  const dot = dotfilesSourceDir(sourceDir, target);
-  if (!fs.existsSync(dot)) throw new Error(`${dot} not found — nothing to import for ${target.label}`);
+  const skillsSrc = personalSkillsDir(sourceDir);
+  const hooksSrc = sourceHooksDir(sourceDir, target);
+  const settingsSrc = settingsFile(sourceDir, target);
+  if (![skillsSrc, hooksSrc, settingsSrc].some(fs.existsSync)) {
+    throw new Error(`nothing to import for ${target.label} — none of ${skillsSrc}, ${hooksSrc}, ${settingsSrc} exist`);
+  }
 
-  console.log(`\n${target.label}: ${dot}/skills -> ${target.homeDir}/skills`);
-  mirrorDir(path.join(dot, 'skills'), path.join(target.homeDir, 'skills'));
+  console.log(`\n${target.label}: ${skillsSrc} -> ${target.homeDir}/skills`);
+  mirrorDir(skillsSrc, path.join(target.homeDir, 'skills'));
 
-  console.log(`${target.label}: ${dot}/hooks -> ${target.homeDir}/hooks`);
-  const hooksDir = path.join(target.homeDir, 'hooks');
-  if (mirrorDir(path.join(dot, 'hooks'), hooksDir) && process.platform !== 'win32') {
-    for (const f of fs.readdirSync(hooksDir)) fs.chmodSync(path.join(hooksDir, f), 0o755);
+  console.log(`${target.label}: ${hooksSrc} -> ${target.homeDir}/hooks`);
+  const liveHooksDir = path.join(target.homeDir, 'hooks');
+  if (mirrorDir(hooksSrc, liveHooksDir) && process.platform !== 'win32') {
+    for (const f of fs.readdirSync(liveHooksDir)) fs.chmodSync(path.join(liveHooksDir, f), 0o755);
   }
 
   console.log(`${target.label}: settings.json -> ${target.homeDir}`);
   fs.mkdirSync(target.homeDir, { recursive: true });
-  const src = path.join(dot, 'settings.json');
-  if (fs.existsSync(src)) fs.copyFileSync(src, path.join(target.homeDir, 'settings.json'));
+  if (fs.existsSync(settingsSrc)) fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'settings.json'));
 
   repairAbsolutePaths(target);
   console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from plugins.json.`);
@@ -147,7 +180,7 @@ function importOne(sourceDir, target) {
 // "go install things" step (network calls, running remote scripts), same reason winget
 // asks you to type `install` rather than doing it as a side effect of anything else.
 function pluginsOne(sourceDir, target) {
-  const file = path.join(dotfilesSourceDir(sourceDir, target), 'plugins.json');
+  const file = personalPluginsFile(sourceDir);
   if (!fs.existsSync(file)) {
     console.log(`${target.label}: no plugins.json — nothing to install`);
     return;
@@ -166,50 +199,35 @@ function pluginsOne(sourceDir, target) {
   }
 }
 
-function listMdNames(dir) {
-  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort() : [];
-}
-
-// Everything at a glance: .ai/<tool>/project/ (agents, commands/prompts) + .ai/<tool>/home/
-// (skills, settings, plugins.json expanded into its actual marketplace/plugin entries —
-// not just the filename). Generated from disk every run, nothing here to hand-maintain or
-// let go stale.
+// Everything at a glance for THIS machine: skills/personal/, <tool>-settings.json,
+// plugins.json expanded into its actual marketplace/plugin entries — not just the
+// filename. Project-scope stuff (agents, prompts) is wrap.js's job, not dotfiles' — it's
+// generated per-project, not synced to this machine's home dir, so it doesn't belong here.
 function treeOne(sourceDir, target) {
-  const projectDir = path.join(sourceDir, target.key, 'project');
-  const home = dotfilesSourceDir(sourceDir, target);
-  console.log(`\n${target.label} — .ai/${target.key}/`);
+  console.log(`\n${target.label} — .ai/`);
 
-  for (const sub of ['agents', 'commands']) {
-    const names = listMdNames(path.join(projectDir, sub));
-    if (names.length) {
-      console.log(`  project/${sub}/${sub === 'commands' ? '  (prompts)' : ''}`);
-      for (const n of names) console.log(`    ${n}`);
-    }
-  }
-
-  const skills = listDirNames(path.join(home, 'skills'));
+  const skills = listDirNames(personalSkillsDir(sourceDir));
   if (skills.length) {
-    console.log('  home/skills/');
+    console.log('  skills/personal/');
     for (const s of skills) console.log(`    ${s}`);
   }
 
-  const settingsFile = path.join(home, 'settings.json');
-  if (fs.existsSync(settingsFile)) {
-    console.log('  home/settings.json');
-    for (const k of Object.keys(JSON.parse(fs.readFileSync(settingsFile, 'utf8')))) console.log(`    ${k}`);
+  const settings = settingsFile(sourceDir, target);
+  if (fs.existsSync(settings)) {
+    console.log(`  ${target.key}-settings.json`);
+    for (const k of Object.keys(JSON.parse(fs.readFileSync(settings, 'utf8')))) console.log(`    ${k}`);
   }
 
-  const pluginsFile = path.join(home, 'plugins.json');
+  const pluginsFile = personalPluginsFile(sourceDir);
   if (fs.existsSync(pluginsFile)) {
-    console.log('  home/plugins.json  (run `dotfiles plugins` to install)');
+    console.log('  plugins.json  (run `dotfiles plugins` to install)');
     for (const i of JSON.parse(fs.readFileSync(pluginsFile, 'utf8'))) console.log(`    ${i.label}`);
   }
 }
 
 function removeOne(sourceDir, target, name) {
-  const dot = dotfilesSourceDir(sourceDir, target);
   let hit = false;
-  for (const dir of [path.join(dot, 'skills', name), path.join(target.homeDir, 'skills', name)]) {
+  for (const dir of [path.join(personalSkillsDir(sourceDir), name), path.join(target.homeDir, 'skills', name)]) {
     if (fs.existsSync(dir)) {
       fs.rmSync(dir, { recursive: true, force: true });
       console.log(`removed: ${dir}`);

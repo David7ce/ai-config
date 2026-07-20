@@ -47,9 +47,7 @@ Keep documentation minimal, accurate, and co-located with the code it describes.
 
 ## 6. Correct example
 
-```php
-// Joomla ACL check required before any write operation
-if (!$user->authorise('core.edit', 'com_content')) {
-    throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
-}
+```js
+// Retried: the upstream API rate-limits bursts above 5 req/s
+await withBackoff(() => client.fetch(url));
 ```

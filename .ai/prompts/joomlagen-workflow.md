@@ -1,26 +1,32 @@
+---
+title: JoomlaGen Workflow
+description: "Use when: Joomla implementation, refactor, review, or testing tasks. Full workflow in .ai/prompts/joomlagen-workflow.md."
+agent: JoomlaGen
+---
+
 # JoomlaGen Workflow
 
 Use this workflow for Joomla development, refactoring, review, or testing tasks.
 
 ## Goal
 
-Apply a consistent, secure, and verifiable workflow by composing skill documents in `.ai/skills/core` and `.ai/skills/projects/joomla`.
+Apply a consistent, secure, and verifiable workflow by composing skill documents in `.ai/skills/projects/joomla`.
 
 ## Required execution flow
 
-1. Read [architecture.md](.ai/skills/core/architecture.md) first and enforce its constraints as highest priority.
+1. Read [architecture.md](.ai/skills/projects/joomla/architecture.md) first and enforce its constraints as highest priority.
 2. Load technical skills based on task scope:
-   - JavaScript: [frontend-javascript.md](.ai/skills/core/frontend-javascript.md)
-   - CSS: [frontend-css.md](.ai/skills/core/frontend-css.md)
+   - JavaScript: [frontend-javascript.md](.ai/skills/projects/joomla/frontend-javascript.md)
+   - CSS: [frontend-css.md](.ai/skills/projects/joomla/frontend-css.md)
    - Joomla platform rules: [joomla.md](.ai/skills/projects/joomla/joomla.md)
    - PHP backend: [php.md](.ai/skills/projects/joomla/php.md)
    - Leaflet/OpenStreetMap (when map features are touched): [javascript-leaflet.md](.ai/skills/projects/joomla/javascript-leaflet.md)
    - Data JSON rules (when data files or map payloads are touched): [joomla-data-json.md](.ai/skills/projects/joomla/joomla-data-json.md)
 3. Implement minimal, modular, low-risk changes; avoid structural changes unless explicitly approved.
 4. Run validation with:
-   - [review-checklist.md](.ai/skills/core/review-checklist.md)
-   - [testing.md](.ai/skills/core/testing.md)
-5. Close only if [definition-of-done.md](.ai/skills/core/definition-of-done.md) is fully satisfied.
+   - [review-checklist.md](.ai/skills/projects/joomla/review-checklist.md)
+   - [testing.md](.ai/skills/projects/joomla/testing.md)
+5. Close only if [definition-of-done.md](.ai/skills/projects/joomla/definition-of-done.md) is fully satisfied.
 
 ## Security and consistency guardrails
 

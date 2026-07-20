@@ -1,4 +1,4 @@
-# Workspace Instructions (Joomla6)
+# Workspace Instructions
 
 ## Purpose
 
@@ -8,63 +8,16 @@ Define always-on behavior for AI coding agents in this repository so skill and w
 
 Apply this precedence order whenever instructions conflict:
 
-1. `.ai/skills/core/architecture.md`
-2. Project-specific skill rules under `.ai/skills/projects/joomla/`
-3. Reusable workflow in `.ai/workflows/joomlagen-workflow.md`
-4. Prompt templates under `.github/prompts/`
-
-## Default mode
-
-- Prioritize minimal, safe, reversible changes.
-- Keep Joomla MVC flow intact.
-- Prefer internal Joomla APIs over direct SQL.
-- Do not introduce unapproved dependencies.
+1. `.ai/skills/core/` — rules that apply to every project (always loaded)
+2. `.ai/skills/projects/<name>/` — rules specific to a project actually present in this repo (load by task scope)
+3. `.ai/prompts/` — multi-step flows that compose the skills above for a given kind of task
 
 ## Routing policy
 
-- Use the `JoomlaGen` agent (defined in `.ai/agents/JoomlaGen.md`) for Joomla implementation, refactor, testing, and review tasks.
-- Use the `joomlagen-workflow` workflow for multi-step execution with validation and DoD closure.
-- Use prompt templates from `.github/prompts/` only to structure task input, not as rule sources.
-- If a task is not Joomla-specific, avoid forcing Joomla workflow files.
-
-## Execution policy
-
-- Read architecture rules before implementation.
-- Apply only the technical files required by the current change.
-- Keep edits scoped to the request and avoid speculative refactors.
-- Prefer changes that are easy to test and easy to revert.
-
-## Path conventions (mandatory)
-
-- All file paths in code, configurations, scripts, and tool calls must be **relative to the project root**.
-- Never use absolute paths (e.g. `C:\Users\...`, `/home/user/...`, `/absolute/path`).
-- If an absolute path is strictly unavoidable, **stop and ask the user explicitly** before proceeding. Do not assume.
-
-## Runtime environment (mandatory)
-
-- All code execution, script runs, and commands must happen inside a **containerized or sandboxed environment** (devcontainer, Docker, or equivalent).
-- Never execute commands directly on the host system unless the user explicitly authorizes it.
-- Prefer devcontainer or Docker Compose configurations that are version-controlled in the repository.
-
-## Security baseline
-
-- Validate input and escape output.
-- Treat all user-provided data as untrusted.
-- Prevent XSS and CSRF regressions.
-- Avoid unsafe SQL patterns.
-
-## Data and frontend guardrails
-
-- Treat JSON files under `/data/` as read-only at runtime.
-- Use inline payloads only for small, first-render-critical data.
-- Use AJAX for larger or non-critical payloads.
-- Keep JavaScript modular and avoid global state.
-- Keep CSS aligned with BEM and mobile-first principles.
+- Load a project skill only when the task actually touches that project/stack; don't force one that doesn't apply.
+- Use an agent from `.ai/agents/` when its stated invocation scope matches the task.
+- Prioritize minimal, safe, reversible changes; keep edits scoped to the request.
 
 ## Completion rule
 
-A task is considered complete only if `review-checklist.md`, `testing.md`, and `definition-of-done.md` criteria are met.
-
-## Additional resources
-
-See `references.md` at the repository root for curated links on agent skills, Claude Code, MCP, and prompt engineering.
+A task is considered complete only once the criteria defined by the relevant project's `definition-of-done.md` (or equivalent) are met.

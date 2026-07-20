@@ -18,16 +18,16 @@ Functional context:
 - [ADDITIONAL CONSTRAINTS]
 
 Required workflow:
-1. Read `.ai/skills/core/architecture.md` and enforce highest-priority constraints.
+1. Read `.ai/skills/projects/joomla/architecture.md` and enforce highest-priority constraints.
 2. Apply technical skills as needed:
-   - JS: `.ai/skills/core/frontend-javascript.md`
+   - JS: `.ai/skills/projects/joomla/frontend-javascript.md`
    - Leaflet (if applicable): `.ai/skills/projects/joomla/javascript-leaflet.md`
    - PHP: `.ai/skills/projects/joomla/php.md`
-   - CSS: `.ai/skills/core/frontend-css.md`
+   - CSS: `.ai/skills/projects/joomla/frontend-css.md`
    - Joomla: `.ai/skills/projects/joomla/joomla.md`
    - JSON: `.ai/skills/projects/joomla/joomla-data-json.md`
-3. Validate with `.ai/skills/core/review.md` and `.ai/skills/core/testing.md`.
-4. Close only if `.ai/skills/core/definition-of-done.md` is satisfied.
+3. Validate with `.ai/prompts/review.md` and `.ai/skills/projects/joomla/testing.md`.
+4. Close only if `.ai/skills/projects/joomla/definition-of-done.md` is satisfied.
 
 Expected deliverable:
 - Brief change summary

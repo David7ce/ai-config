@@ -25,6 +25,11 @@
     "args": ["plugin", "marketplace", "add", "kepano/obsidian-skills"]
   },
   {
+    "label": "claude plugin marketplace: codex-plugin-cc",
+    "command": "claude",
+    "args": ["plugin", "marketplace", "add", "openai/codex-plugin-cc"]
+  },
+  {
     "label": "claude plugin: frontend-design",
     "command": "claude",
     "args": ["plugin", "install", "frontend-design@claude-plugins-official", "--scope", "user"]
@@ -53,6 +58,11 @@
     "label": "claude plugin: obsidian",
     "command": "claude",
     "args": ["plugin", "install", "obsidian@obsidian-skills", "--scope", "user"]
+  },
+  {
+    "label": "claude plugin: codex",
+    "command": "claude",
+    "args": ["plugin", "install", "codex@openai-codex", "--scope", "user"]
   },
   {
     "label": "codebase-memory-mcp (installs its own MCP server + Claude Code hooks — see https://github.com/DeusData/codebase-memory-mcp)",

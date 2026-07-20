@@ -12,31 +12,38 @@ const dotfiles = require('./dotfiles');
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
   fs.mkdirSync(path.join(sourceDir, 'skills/projects/demo'), { recursive: true });
-  fs.mkdirSync(path.join(sourceDir, 'workflows'), { recursive: true });
+  fs.mkdirSync(path.join(sourceDir, 'prompts'), { recursive: true });
   fs.mkdirSync(path.join(sourceDir, 'agents'), { recursive: true });
-  fs.mkdirSync(path.join(sourceDir, 'claude/project/agents'), { recursive: true });
-  fs.mkdirSync(path.join(sourceDir, 'claude/project/commands'), { recursive: true });
-  fs.mkdirSync(path.join(sourceDir, 'opencode/project/agents'), { recursive: true });
-  fs.mkdirSync(path.join(sourceDir, 'opencode/project/commands'), { recursive: true });
   fs.writeFileSync(path.join(sourceDir, 'instructions.md'), '# Test instructions\n');
   fs.writeFileSync(path.join(sourceDir, 'skills/core/foo.md'), '# foo\n');
-  fs.writeFileSync(path.join(sourceDir, 'skills/projects/demo/bar.md'), '# bar\n');
-  fs.writeFileSync(path.join(sourceDir, 'workflows/baz.md'), '# baz\n');
   fs.writeFileSync(
-    path.join(sourceDir, 'claude/project/agents/DemoAgent.md'),
-    '---\nname: DemoAgent\nmodel: sonnet\n---\n\nDemo agent body.\n'
+    path.join(sourceDir, 'skills/projects/demo/bar.md'),
+    '---\nname: bar\ndescription: Demo project skill for bar.\n---\n\n# bar\n'
   );
+  // one behavior doc + one metadata sidecar is the whole agent — no per-tool files to
+  // hand-maintain; wrap.js generates .claude/agents/, .opencode/agents/, .github/agents/
+  fs.writeFileSync(path.join(sourceDir, 'agents/DemoAgent.md'), '# DemoAgent\n\nDemo agent body.\n');
   fs.writeFileSync(
-    path.join(sourceDir, 'claude/project/commands/demo-cmd.md'),
-    '---\ndescription: "Demo command"\n---\n\nDemo command body.\n'
+    path.join(sourceDir, 'agents/DemoAgent.json'),
+    JSON.stringify({
+      description: 'Demo agent description.',
+      workflow: 'prompts/baz.md',
+      claude: { model: 'sonnet', tools: ['Read', 'Edit'] },
+      opencode: { mode: 'subagent', model: 'anthropic/demo' },
+      github: { model: 'gpt-4o', tools: ['read/readFile'] },
+    })
   );
+  // same for prompts: flat frontmatter on the one source file, no per-tool copies
   fs.writeFileSync(
-    path.join(sourceDir, 'opencode/project/agents/DemoAgent.md'),
-    '---\nmode: subagent\nmodel: anthropic/demo\n---\n\nDemo agent body.\n'
+    path.join(sourceDir, 'prompts/baz.md'),
+    '---\ntitle: Baz\ndescription: Demo prompt for baz.\nagent: DemoAgent\n---\n\n# baz\n'
   );
+  // the one kind of file that stays hand-authored: a Copilot-only template with no
+  // generic source to derive from — the *.prompt.md double extension marks it as bespoke,
+  // copied verbatim into .github/prompts/ instead of feeding generic generation
   fs.writeFileSync(
-    path.join(sourceDir, 'opencode/project/commands/demo-cmd.md'),
-    '---\ndescription: "Demo command"\n---\n\nDemo command body.\n'
+    path.join(sourceDir, 'prompts/demo.prompt.md'),
+    '---\ncommand: /demo\ndescription: "Bespoke Copilot template"\n---\n\n# Demo template\n'
   );
   fs.writeFileSync(
     path.join(sourceDir, 'mcp-servers.json'),
@@ -52,34 +59,73 @@ async function main() {
   const targetDir = path.join(tmp, 'target');
   buildFixture(sourceDir);
 
-  // pre-seed a stale file where wrap's Claude wrapper-mirror will write, to prove the
-  // mirror actually deletes destination extras instead of just adding on top
+  // pre-seed stale files where wrap's Claude mirrors will write, to prove the mirrors
+  // actually delete destination extras instead of just adding on top
   fs.mkdirSync(path.join(targetDir, '.claude/agents'), { recursive: true });
   fs.writeFileSync(path.join(targetDir, '.claude/agents/Stale.md'), 'should be gone after wrap\n');
+  fs.mkdirSync(path.join(targetDir, '.claude/skills/stale-skill'), { recursive: true });
+  fs.writeFileSync(path.join(targetDir, '.claude/skills/stale-skill/SKILL.md'), 'should be gone after wrap\n');
 
   await wrap.run(['--all', '--source', sourceDir, '--target', targetDir]);
 
   const claude = fs.readFileSync(path.join(targetDir, 'CLAUDE.md'), 'utf8');
   assert.match(claude, /@\.ai\/instructions\.md/, 'CLAUDE.md imports instructions.md');
   assert.match(claude, /@\.ai\/skills\/core\/foo\.md/, 'CLAUDE.md imports core skill');
-  assert.match(claude, /@\.ai\/skills\/projects\/demo\/bar\.md/, 'CLAUDE.md imports project skill');
+  assert.doesNotMatch(
+    claude,
+    /@\.ai\/skills\/projects\/demo\/bar\.md/,
+    'CLAUDE.md does NOT eager-import project skills — those load on demand instead'
+  );
+  assert.match(claude, /`\.claude\/skills\/`/, 'CLAUDE.md points at .claude/skills/ for on-demand project skills');
 
-  const demoAgent = fs.readFileSync(path.join(targetDir, '.claude/agents/DemoAgent.md'), 'utf8');
-  assert.match(demoAgent, /model: sonnet/, '.claude/agents/ copied verbatim from .ai/claude/project/agents/');
-  const demoCmd = fs.readFileSync(path.join(targetDir, '.claude/commands/demo-cmd.md'), 'utf8');
-  assert.match(demoCmd, /Demo command/, '.claude/commands/ copied verbatim from .ai/claude/project/commands/');
+  const demoSkill = fs.readFileSync(path.join(targetDir, '.claude/skills/demo-bar/SKILL.md'), 'utf8');
+  assert.match(
+    demoSkill,
+    /^---\nname: demo-bar\ndescription: Demo project skill for bar\.\n---/,
+    'project skill materialized as a real Claude Skill (project-prefixed name, own frontmatter)'
+  );
   assert.ok(
-    !fs.existsSync(path.join(targetDir, '.claude/agents/Stale.md')),
-    'wrapper mirror deletes destination extras (Stale.md removed, not left behind)'
+    !fs.existsSync(path.join(targetDir, '.claude/skills/stale-skill')),
+    'skill materialization deletes destination extras (stale-skill removed, not left behind)'
   );
 
+  // Agents & Prompts: generated from .ai/agents/DemoAgent.{md,json} and .ai/prompts/baz.md
+  // — one shared source each, no per-tool files hand-authored in the fixture.
+  const demoAgent = fs.readFileSync(path.join(targetDir, '.claude/agents/DemoAgent.md'), 'utf8');
+  assert.match(demoAgent, /name: DemoAgent/, '.claude/agents/ generated with name from filename');
+  assert.match(demoAgent, /description: "Demo agent description\."/, '.claude/agents/ generated with description from sidecar');
+  assert.match(demoAgent, /model: sonnet/, '.claude/agents/ generated with claude-specific model from sidecar');
+  assert.match(demoAgent, /tools: \[Read, Edit\]/, '.claude/agents/ generated with claude-specific tools from sidecar');
+  assert.match(demoAgent, /Workflow: see `\.ai\/prompts\/baz\.md`/, '.claude/agents/ generated with workflow pointer');
+  assert.ok(
+    !fs.existsSync(path.join(targetDir, '.claude/agents/Stale.md')),
+    'agent generation deletes destination extras (Stale.md removed, not left behind)'
+  );
+
+  const demoCmd = fs.readFileSync(path.join(targetDir, '.claude/commands/baz.md'), 'utf8');
+  assert.match(demoCmd, /description: "Demo prompt for baz\."/, '.claude/commands/ generated with description from prompt frontmatter');
+  assert.doesNotMatch(demoCmd, /agent:/, 'Claude command wrapper has no agent binding (opencode-only field)');
+
   const agents = fs.readFileSync(path.join(targetDir, 'AGENTS.md'), 'utf8');
-  assert.match(agents, /`\.ai\/workflows\/baz\.md`/, 'AGENTS.md references the workflow');
+  assert.match(agents, /`\.ai\/prompts\/baz\.md`/, 'AGENTS.md references the prompt');
 
   const ocAgent = fs.readFileSync(path.join(targetDir, '.opencode/agents/DemoAgent.md'), 'utf8');
-  assert.match(ocAgent, /mode: subagent/, '.opencode/agents/ copied verbatim from .ai/opencode/project/agents/');
-  const ocCmd = fs.readFileSync(path.join(targetDir, '.opencode/commands/demo-cmd.md'), 'utf8');
-  assert.match(ocCmd, /Demo command/, '.opencode/commands/ copied verbatim from .ai/opencode/project/commands/');
+  assert.doesNotMatch(ocAgent, /^name:/m, 'opencode agent has no name field, matching the real confirmed shape');
+  assert.match(ocAgent, /mode: subagent/, '.opencode/agents/ generated with opencode-specific mode from sidecar');
+  assert.match(ocAgent, /model: anthropic\/demo/, '.opencode/agents/ generated with opencode-specific model from sidecar');
+
+  const ocCmd = fs.readFileSync(path.join(targetDir, '.opencode/commands/baz.md'), 'utf8');
+  assert.match(ocCmd, /agent: DemoAgent/, '.opencode/commands/ generated with agent binding from prompt frontmatter');
+
+  const ghAgent = fs.readFileSync(path.join(targetDir, '.github/agents/DemoAgent.agent.md'), 'utf8');
+  assert.match(ghAgent, /model: gpt-4o/, '.github/agents/ generated with github-specific model from sidecar');
+  assert.match(ghAgent, /tools: \[read\/readFile\]/, '.github/agents/ generated with github-specific tools from sidecar');
+
+  const ghCmd = fs.readFileSync(path.join(targetDir, '.github/prompts/baz.prompt.md'), 'utf8');
+  assert.match(ghCmd, /command: \/baz/, '.github/prompts/ generated with command derived from filename');
+
+  const ghBespoke = fs.readFileSync(path.join(targetDir, '.github/prompts/demo.prompt.md'), 'utf8');
+  assert.match(ghBespoke, /Bespoke Copilot template/, '.github/prompts/ still copies the one hand-authored template verbatim');
 
   const gemini = fs.readFileSync(path.join(targetDir, 'GEMINI.md'), 'utf8');
   assert.match(gemini, /Read `AGENTS\.md`/, 'GEMINI.md points at AGENTS.md');
@@ -106,11 +152,11 @@ async function main() {
 
   // dotfiles import — never against the real home in an automated test. --home redirects
   // it to a scratch dir; this is also the mechanism a human uses to test import safely.
-  fs.mkdirSync(path.join(sourceDir, 'claude/home/skills/demo-skill'), { recursive: true });
-  fs.mkdirSync(path.join(sourceDir, 'claude/home/hooks'), { recursive: true });
-  fs.writeFileSync(path.join(sourceDir, 'claude/home/skills/demo-skill/SKILL.md'), '# demo\n');
-  fs.writeFileSync(path.join(sourceDir, 'claude/home/hooks/demo-hook'), '#!/bin/bash\necho hi\n');
-  fs.writeFileSync(path.join(sourceDir, 'claude/home/settings.json'), '{"model":"test"}\n');
+  fs.mkdirSync(path.join(sourceDir, 'skills/personal/demo-skill'), { recursive: true });
+  fs.mkdirSync(path.join(sourceDir, 'claude-hooks'), { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'skills/personal/demo-skill/SKILL.md'), '# demo\n');
+  fs.writeFileSync(path.join(sourceDir, 'claude-hooks/demo-hook'), '#!/bin/bash\necho hi\n');
+  fs.writeFileSync(path.join(sourceDir, 'claude-settings.json'), '{"model":"test"}\n');
   const fakeHome = path.join(tmp, 'fake-home');
 
   // pre-seed a stale skill in the scratch home to prove import's mirror deletes it, not
@@ -141,24 +187,27 @@ async function main() {
     assert.strictEqual(mode, 0o755, 'imported hook script is chmod +x on POSIX');
   }
 
-  // dotfiles plugins — runs {command, args} entries from plugins.json. Use `node
-  // --version` (always present, no network, exit 0) instead of a real installer so the
-  // test proves the runner works without actually installing anything.
+  // dotfiles plugins — runs {command, args} entries from plugins.json (tool-agnostic — an
+  // entry can be `claude plugin install ...` or `codex mcp add ...` just as well). Use
+  // `node --version` (always present, no network, exit 0) instead of a real installer so
+  // the test proves the runner works without actually installing anything.
   fs.writeFileSync(
-    path.join(sourceDir, 'claude/home/plugins.json'),
+    path.join(sourceDir, 'plugins.json'),
     JSON.stringify([{ label: 'demo installer', command: process.execPath, args: ['--version'] }])
   );
   await dotfiles.run(['plugins', '--claude', '--home', fakeHome], sourceDir); // just confirm it doesn't throw
 
-  // dotfiles tree — combined project/ + home/ overview, capture stdout to check content
+  // dotfiles tree — home-scope overview (personal skills + settings + plugins), capture
+  // stdout to check content. Project-scope stuff (agents, prompts) is wrap.js's job now,
+  // not shown here.
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(' '));
   await dotfiles.run(['tree', '--claude', '--home', fakeHome], sourceDir);
   console.log = origLog;
   const treeOutput = logs.join('\n');
-  assert.match(treeOutput, /project\/agents\//, 'tree shows project/agents/');
-  assert.match(treeOutput, /DemoAgent\.md/, 'tree lists agent files');
+  assert.match(treeOutput, /skills\/personal\//, 'tree shows skills/personal/');
+  assert.match(treeOutput, /demo-skill/, 'tree lists personal skill names');
   assert.match(treeOutput, /demo installer/, 'tree expands plugins.json labels, not just the filename');
 
   fs.rmSync(tmp, { recursive: true, force: true });

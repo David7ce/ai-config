@@ -16,7 +16,7 @@ Define guidelines for working on Astro projects while reusing the shared `core` 
 - Prioritize static generation (`output: 'static'`) when interactivity is not needed.
 - Keep components small and content-oriented; one responsibility per component.
 - Avoid unnecessary complexity in client hydration.
-- Follow core conventions: BEM CSS, modular JS, git hygiene.
+- Follow the core git and documentation conventions.
 
 ---
 

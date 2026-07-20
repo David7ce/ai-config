@@ -1,0 +1,32 @@
+{
+  "description": "Use when: implementing, refactoring, reviewing, or testing Joomla code. Behavior defined in .ai/agents/JoomlaGen.md.",
+  "workflow": "prompts/joomlagen-workflow.md",
+  "claude": {
+    "model": "claude-sonnet-4-6",
+    "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob", "WebFetch", "WebSearch", "TodoWrite"]
+  },
+  "opencode": {
+    "mode": "subagent",
+    "model": "anthropic/claude-sonnet-4-6"
+  },
+  "github": {
+    "model": "gpt-4o",
+    "argument-hint": "Describe the task (example: create article override, refactor map JS module, harden PHP controller, review Joomla component security).",
+    "tools": [
+      "vscode/getProjectSetupInfo",
+      "vscode/memory",
+      "vscode/askQuestions",
+      "execute/runInTerminal",
+      "execute/getTerminalOutput",
+      "read/readFile",
+      "read/problems",
+      "edit/editFiles",
+      "edit/createFile",
+      "edit/createDirectory",
+      "search/codebase",
+      "search/fileSearch",
+      "search/textSearch",
+      "web/fetch"
+    ]
+  }
+}
