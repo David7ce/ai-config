@@ -1,112 +1,97 @@
 [
   {
-    "label": "claude plugin marketplace: claude-plugins-official",
-    "command": "claude",
-    "args": ["plugin", "marketplace", "add", "anthropics/claude-plugins-official"]
+    "label": "claude-plugins-official",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "marketplace", "add", "anthropics/claude-plugins-official"] }
+    ]
   },
   {
-    "label": "claude plugin marketplace: ponytail",
-    "command": "claude",
-    "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail"]
+    "label": "frontend-design",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "frontend-design@claude-plugins-official", "--scope", "user"] }
+    ]
   },
   {
-    "label": "claude plugin marketplace: caveman",
-    "command": "claude",
-    "args": ["plugin", "marketplace", "add", "JuliusBrussee/caveman"]
+    "label": "code-simplifier",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "code-simplifier@claude-plugins-official", "--scope", "user"] }
+    ]
   },
   {
-    "label": "claude plugin marketplace: chrome-devtools-mcp",
-    "command": "claude",
-    "args": ["plugin", "marketplace", "add", "ChromeDevTools/chrome-devtools-mcp"]
+    "label": "ponytail",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add DietrichGebert/ponytail && claude plugin install ponytail@ponytail --scope user" },
+      { "agent": "codex", "command": "codex", "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail", "codex"] }
+    ]
   },
   {
-    "label": "claude plugin marketplace: obsidian-skills",
-    "command": "claude",
-    "args": ["plugin", "marketplace", "add", "kepano/obsidian-skills"]
+    "label": "caveman",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman --scope user" },
+      { "agent": "codex", "command": "npx", "args": ["skills", "add", "JuliusBrussee/caveman", "-a", "codex"] }
+    ]
   },
   {
-    "label": "claude plugin marketplace: codex-plugin-cc",
-    "command": "claude",
-    "args": ["plugin", "marketplace", "add", "openai/codex-plugin-cc"]
+    "label": "chrome-devtools-mcp",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add ChromeDevTools/chrome-devtools-mcp && claude plugin install chrome-devtools-mcp@chrome-devtools-plugins --scope user" }
+    ]
   },
   {
-    "label": "claude plugin: frontend-design",
-    "command": "claude",
-    "args": ["plugin", "install", "frontend-design@claude-plugins-official", "--scope", "user"]
+    "label": "obsidian",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add kepano/obsidian-skills && claude plugin install obsidian@obsidian-skills --scope user" }
+    ]
   },
   {
-    "label": "claude plugin: code-simplifier",
-    "command": "claude",
-    "args": ["plugin", "install", "code-simplifier@claude-plugins-official", "--scope", "user"]
+    "label": "codex",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add openai/codex-plugin-cc && claude plugin install codex@openai-codex --scope user" }
+    ]
   },
   {
-    "label": "claude plugin: ponytail",
-    "command": "claude",
-    "args": ["plugin", "install", "ponytail@ponytail", "--scope", "user"]
+    "label": "cloudflare",
+    "installs": [
+      { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "openai/plugins/plugins/cloudflare", "--plugin"] }
+    ]
   },
   {
-    "label": "claude plugin: caveman",
-    "command": "claude",
-    "args": ["plugin", "install", "caveman@caveman", "--scope", "user"]
+    "label": "build-web-apps",
+    "installs": [
+      { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "openai/plugins/plugins/build-web-apps", "--plugin"] }
+    ]
   },
   {
-    "label": "claude plugin: chrome-devtools-mcp",
-    "command": "claude",
-    "args": ["plugin", "install", "chrome-devtools-mcp@chrome-devtools-plugins", "--scope", "user"]
+    "label": "higgsfield-ai/skills",
+    "installs": [
+      { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "higgsfield-ai/skills", "--plugin"] }
+    ]
   },
   {
-    "label": "claude plugin: obsidian",
-    "command": "claude",
-    "args": ["plugin", "install", "obsidian@obsidian-skills", "--scope", "user"]
+    "label": "canva",
+    "installs": [
+      { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "openai/plugins/plugins/canva", "--plugin"] }
+    ]
   },
   {
-    "label": "claude plugin: codex",
-    "command": "claude",
-    "args": ["plugin", "install", "codex@openai-codex", "--scope", "user"]
+    "label": "firecrawl-cli",
+    "description": "init --all --browser",
+    "installs": [{ "command": "npx", "args": ["-y", "firecrawl-cli@latest", "init", "--all", "--browser"] }]
   },
   {
-    "label": "codex plugin: cloudflare",
-    "command": "npx",
-    "args": ["codex-marketplace", "add", "openai/plugins/plugins/cloudflare", "--plugin"]
+    "label": "codebase-memory-mcp",
+    "description": "installs its own MCP server + Claude Code hooks — see https://github.com/DeusData/codebase-memory-mcp",
+    "installs": [
+      {
+        "agent": "claude",
+        "command": "powershell",
+        "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 | iex"]
+      }
+    ]
   },
   {
-    "label": "codex plugin: build-web-apps",
-    "command": "npx",
-    "args": ["codex-marketplace", "add", "openai/plugins/plugins/build-web-apps", "--plugin"]
-  },
-  {
-    "label": "codex plugin: higgsfield-ai/skills",
-    "command": "npx",
-    "args": ["codex-marketplace", "add", "higgsfield-ai/skills", "--plugin"]
-  },
-  {
-    "label": "codex plugin: canva",
-    "command": "npx",
-    "args": ["codex-marketplace", "add", "openai/plugins/plugins/canva", "--plugin"]
-  },
-  {
-    "label": "codex skill: caveman",
-    "command": "npx",
-    "args": ["skills", "add", "JuliusBrussee/caveman", "-a", "codex"]
-  },
-  {
-    "label": "codex plugin marketplace: ponytail",
-    "command": "codex",
-    "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail", "codex"]
-  },
-  {
-    "label": "firecrawl-cli (init --all --browser)",
-    "command": "npx",
-    "args": ["-y", "firecrawl-cli@latest", "init", "--all", "--browser"]
-  },
-  {
-    "label": "codebase-memory-mcp (installs its own MCP server + Claude Code hooks — see https://github.com/DeusData/codebase-memory-mcp)",
-    "command": "powershell",
-    "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 | iex"]
-  },
-  {
-    "label": "context7 (docs MCP server setup)",
-    "command": "npx",
-    "args": ["ctx7", "setup"]
+    "label": "context7",
+    "description": "docs MCP server setup",
+    "installs": [{ "command": "npx", "args": ["ctx7", "setup"] }]
   }
 ]

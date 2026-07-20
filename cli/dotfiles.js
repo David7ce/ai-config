@@ -82,6 +82,15 @@ function personalPluginsFile(sourceDir) {
   return path.join(sourceDir, 'plugins.json');
 }
 
+// Pulls the installed plugin@marketplace id out of an install step, whether it's a plain
+// {command, args} form or a chained {shell} form — used to compare against this machine's
+// live enabledPlugins. Returns null for steps that aren't a `claude plugin install`.
+function claudeInstallId(step) {
+  if (step.command === 'claude' && step.args[0] === 'plugin' && step.args[1] === 'install') return step.args[2];
+  const m = (step.shell || '').match(/claude plugin install (\S+)/);
+  return m ? m[1] : null;
+}
+
 function listDirNames(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()) : [];
 }
@@ -123,10 +132,8 @@ function listOne(sourceDir, target) {
 
   const pluginsFile = personalPluginsFile(sourceDir);
   if (fs.existsSync(pluginsFile) && fs.existsSync(liveSettingsFile)) {
-    const installers = JSON.parse(fs.readFileSync(pluginsFile, 'utf8'));
-    const claudePlugins = installers
-      .filter((i) => i.command === 'claude' && i.args[0] === 'plugin' && i.args[1] === 'install')
-      .map((i) => i.args[2]);
+    const packages = JSON.parse(fs.readFileSync(pluginsFile, 'utf8'));
+    const claudePlugins = packages.flatMap((p) => p.installs).map(claudeInstallId).filter(Boolean);
     const live = JSON.parse(fs.readFileSync(liveSettingsFile, 'utf8'));
     showDrift('plugins (run `dotfiles plugins` to install)', claudePlugins, Object.keys(live.enabledPlugins || {}));
   }
@@ -174,8 +181,15 @@ function importOne(sourceDir, target) {
   console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from plugins.json.`);
 }
 
-// Package-manager style: a labeled list of {command, args} — Claude plugin installs and
-// third-party tool installers alike — run in order, one machine-modifying step per entry.
+// Package-manager style: a labeled list of packages, each with one or more install steps
+// — run in order, one machine-modifying step per entry. A package with steps for more
+// than one agent (e.g. a plugin that installs into both Claude and Codex) is one entry,
+// not a copy per agent — the label states what's being installed once, and each step says
+// which agent it's for. A step is normally {agent, command, args}; when an agent
+// genuinely needs more than one invocation (e.g. `plugin marketplace add` must run before
+// `plugin install` can reference it), that's still ONE step for that agent — {agent,
+// shell: "cmd1 && cmd2"} — not two separate steps, so "how many claude steps does this
+// package have" always answers "one per agent it supports."
 // Not chained into importOne(): import stays pure file-mirroring, plugins is the explicit
 // "go install things" step (network calls, running remote scripts), same reason winget
 // asks you to type `install` rather than doing it as a side effect of anything else.
@@ -185,17 +199,19 @@ function pluginsOne(sourceDir, target) {
     console.log(`${target.label}: no plugins.json — nothing to install`);
     return;
   }
-  const installers = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const packages = JSON.parse(fs.readFileSync(file, 'utf8'));
   const quote = (a) => (/\s/.test(a) ? `"${a}"` : a);
-  for (const { label, command, args } of installers) {
-    const cmdLine = [command, ...args].map(quote).join(' ');
-    console.log(`\n${target.label}: ${label}\n  $ ${cmdLine}`);
-    // shell:true with a single pre-quoted string (no separate args array) — the safe form;
-    // shell:true *with* an args array lets the shell re-split unescaped strings (Node
-    // flags this, DEP0190) and breaks paths with spaces like "C:\Program Files\...".
-    const result = spawnSync(cmdLine, { stdio: 'inherit', shell: true });
-    if (result.error) console.log(`  failed to run: ${result.error.message}`);
-    else if (result.status !== 0) console.log(`  exited ${result.status} — likely already installed, continuing`);
+  for (const { label, installs } of packages) {
+    for (const step of installs) {
+      // shell:true with a single pre-quoted string (no separate args array) — the safe form;
+      // shell:true *with* an args array lets the shell re-split unescaped strings (Node
+      // flags this, DEP0190) and breaks paths with spaces like "C:\Program Files\...".
+      const cmdLine = step.shell || [step.command, ...step.args].map(quote).join(' ');
+      console.log(`\n${target.label}: ${label}${step.agent ? ` (${step.agent})` : ''}\n  $ ${cmdLine}`);
+      const result = spawnSync(cmdLine, { stdio: 'inherit', shell: true });
+      if (result.error) console.log(`  failed to run: ${result.error.message}`);
+      else if (result.status !== 0) console.log(`  exited ${result.status} — likely already installed, continuing`);
+    }
   }
 }
 
@@ -221,7 +237,10 @@ function treeOne(sourceDir, target) {
   const pluginsFile = personalPluginsFile(sourceDir);
   if (fs.existsSync(pluginsFile)) {
     console.log('  plugins.json  (run `dotfiles plugins` to install)');
-    for (const i of JSON.parse(fs.readFileSync(pluginsFile, 'utf8'))) console.log(`    ${i.label}`);
+    for (const p of JSON.parse(fs.readFileSync(pluginsFile, 'utf8'))) {
+      const agents = [...new Set(p.installs.map((i) => i.agent).filter(Boolean))];
+      console.log(`    ${p.label}${agents.length ? ` [${agents.join(', ')}]` : ''}`);
+    }
   }
 }
 

@@ -187,15 +187,39 @@ async function main() {
     assert.strictEqual(mode, 0o755, 'imported hook script is chmod +x on POSIX');
   }
 
-  // dotfiles plugins — runs {command, args} entries from plugins.json (tool-agnostic — an
-  // entry can be `claude plugin install ...` or `codex mcp add ...` just as well). Use
-  // `node --version` (always present, no network, exit 0) instead of a real installer so
-  // the test proves the runner works without actually installing anything.
+  // dotfiles plugins — runs each package's {agent, command, args} install steps from
+  // plugins.json (tool-agnostic — a step can be `claude plugin install ...` or
+  // `codex mcp add ...` just as well; a package with steps for more than one agent is one
+  // entry, not a copy per agent). Use `node --version` (always present, no network, exit 0)
+  // instead of a real installer so the test proves the runner works without actually
+  // installing anything.
   fs.writeFileSync(
     path.join(sourceDir, 'plugins.json'),
-    JSON.stringify([{ label: 'demo installer', command: process.execPath, args: ['--version'] }])
+    JSON.stringify([
+      { label: 'demo installer', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
+      {
+        label: 'shell-demo',
+        // a single agent needing two chained CLI calls (marketplace add, then install) is
+        // still one step, not two — {shell} instead of a second {command, args} entry
+        installs: [{ agent: 'claude', shell: 'claude plugin marketplace add foo/bar && claude plugin install shell-demo@bar --scope user' }],
+      },
+    ])
   );
   await dotfiles.run(['plugins', '--claude', '--home', fakeHome], sourceDir); // just confirm it doesn't throw
+
+  // dotfiles list's drift check must extract "shell-demo@bar" from the {shell} step above,
+  // the same way it does from a plain {command, args} step, to compare against enabledPlugins
+  fs.writeFileSync(path.join(fakeHome, '.claude/settings.json'), JSON.stringify({ enabledPlugins: {} }));
+  const listLogs = [];
+  const origLogForList = console.log;
+  console.log = (...a) => listLogs.push(a.join(' '));
+  await dotfiles.run(['list', '--claude', '--home', fakeHome], sourceDir);
+  console.log = origLogForList;
+  assert.match(
+    listLogs.join('\n'),
+    /shell-demo@bar/,
+    "list's plugin drift check extracts the plugin id out of a chained {shell} install step"
+  );
 
   // dotfiles tree — home-scope overview (personal skills + settings + plugins), capture
   // stdout to check content. Project-scope stuff (agents, prompts) is wrap.js's job now,
@@ -209,6 +233,7 @@ async function main() {
   assert.match(treeOutput, /skills\/personal\//, 'tree shows skills/personal/');
   assert.match(treeOutput, /demo-skill/, 'tree lists personal skill names');
   assert.match(treeOutput, /demo installer/, 'tree expands plugins.json labels, not just the filename');
+  assert.match(treeOutput, /demo installer \[demo\]/, 'tree shows which agent(s) a package installs for');
 
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('ok — all checks passed');
