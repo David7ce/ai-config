@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Specialized agent for Joomla work in this repository. Tool-agnostic behavior definition — loaded by tool-specific wrappers in `.claude/agents/` and `.github/agents/`.
+Specialized agent for Joomla work in this repository. Tool-agnostic behavior definition — materialized into each tool's native agent format (`.claude/agents/`, `.opencode/agents/`, `.github/agents/`).
 
 ## Invocation scope
 

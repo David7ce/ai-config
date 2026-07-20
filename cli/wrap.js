@@ -287,15 +287,21 @@ function writeFresh(targetDir, relDir, entries) {
 const frontmatterBlock = (pairs) => ['---', ...pairs.map(([k, v]) => `${k}: ${v}`), '---'].join('\n');
 const q = (s) => JSON.stringify(s); // quote+escape a frontmatter string value
 
+// Shared by all three agent generators below — only the frontmatter fields genuinely
+// differ per tool (model IDs, tool-name vocab); the body is always the same two pointers.
+function agentBody(name, meta, toolLabel) {
+  const body = [`# ${name} Agent (${toolLabel})`, '', `Behavior and scope: see \`.ai/agents/${name}.md\`.`];
+  if (meta.workflow) body.push('', `Workflow: see \`.ai/${meta.workflow}\`.`);
+  return body.join('\n');
+}
+
 function genClaudeAgent({ name, meta }) {
   const c = meta.claude || {};
   const fm = [['name', name]];
   if (meta.description) fm.push(['description', q(meta.description)]);
   if (c.model) fm.push(['model', c.model]);
   if (c.tools) fm.push(['tools', `[${c.tools.join(', ')}]`]);
-  const body = [`# ${name} Agent (Claude)`, '', `Behavior and scope: see \`.ai/agents/${name}.md\`.`];
-  if (meta.workflow) body.push('', `Workflow: see \`.ai/${meta.workflow}\`.`);
-  return `${frontmatterBlock(fm)}\n\n${body.join('\n')}\n`;
+  return `${frontmatterBlock(fm)}\n\n${agentBody(name, meta, 'Claude')}\n`;
 }
 
 function genOpencodeAgent({ name, meta }) {
@@ -304,9 +310,7 @@ function genOpencodeAgent({ name, meta }) {
   if (meta.description) fm.push(['description', q(meta.description)]);
   if (o.mode) fm.push(['mode', o.mode]);
   if (o.model) fm.push(['model', o.model]);
-  const body = [`# ${name} Agent (opencode)`, '', `Behavior and scope: see \`.ai/agents/${name}.md\`.`];
-  if (meta.workflow) body.push('', `Workflow: see \`.ai/${meta.workflow}\`.`);
-  return `${frontmatterBlock(fm)}\n\n${body.join('\n')}\n`;
+  return `${frontmatterBlock(fm)}\n\n${agentBody(name, meta, 'opencode')}\n`;
 }
 
 function genGithubAgent({ name, meta }) {
@@ -316,9 +320,7 @@ function genGithubAgent({ name, meta }) {
   if (g['argument-hint']) fm.push(['argument-hint', q(g['argument-hint'])]);
   if (g.model) fm.push(['model', g.model]);
   if (g.tools) fm.push(['tools', `[${g.tools.join(', ')}]`]);
-  const body = [`# ${name} Agent (GitHub Copilot)`, '', `Behavior and scope: see \`.ai/agents/${name}.md\`.`];
-  if (meta.workflow) body.push('', `Workflow: see \`.ai/${meta.workflow}\`.`);
-  return `${frontmatterBlock(fm)}\n\n${body.join('\n')}\n`;
+  return `${frontmatterBlock(fm)}\n\n${agentBody(name, meta, 'GitHub Copilot')}\n`;
 }
 
 function genPromptFile({ name, meta }, { agentBinding, command } = {}) {
@@ -398,9 +400,12 @@ async function run(argv) {
   for (const target of TARGETS) {
     if (selected.has(target.key)) written.push(...target.generate(src, targetDir, sourceDir));
   }
+  // codex and opencode both write AGENTS.md (it's a real shared standard, not a mistake) —
+  // dedupe so a combined run doesn't list the same path twice
+  const uniqueWritten = [...new Set(written)];
 
-  console.log(`\n✓ wrote ${written.length} item(s) to ${targetDir}:`);
-  for (const f of written) console.log(`  - ${f}`);
+  console.log(`\n✓ wrote ${uniqueWritten.length} item(s) to ${targetDir}:`);
+  for (const f of uniqueWritten) console.log(`  - ${f}`);
 }
 
 module.exports = { run };

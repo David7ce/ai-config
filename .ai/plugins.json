@@ -65,8 +65,48 @@
     "args": ["plugin", "install", "codex@openai-codex", "--scope", "user"]
   },
   {
+    "label": "codex plugin: cloudflare",
+    "command": "npx",
+    "args": ["codex-marketplace", "add", "openai/plugins/plugins/cloudflare", "--plugin"]
+  },
+  {
+    "label": "codex plugin: build-web-apps",
+    "command": "npx",
+    "args": ["codex-marketplace", "add", "openai/plugins/plugins/build-web-apps", "--plugin"]
+  },
+  {
+    "label": "codex plugin: higgsfield-ai/skills",
+    "command": "npx",
+    "args": ["codex-marketplace", "add", "higgsfield-ai/skills", "--plugin"]
+  },
+  {
+    "label": "codex plugin: canva",
+    "command": "npx",
+    "args": ["codex-marketplace", "add", "openai/plugins/plugins/canva", "--plugin"]
+  },
+  {
+    "label": "codex skill: caveman",
+    "command": "npx",
+    "args": ["skills", "add", "JuliusBrussee/caveman", "-a", "codex"]
+  },
+  {
+    "label": "codex plugin marketplace: ponytail",
+    "command": "codex",
+    "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail", "codex"]
+  },
+  {
+    "label": "firecrawl-cli (init --all --browser)",
+    "command": "npx",
+    "args": ["-y", "firecrawl-cli@latest", "init", "--all", "--browser"]
+  },
+  {
     "label": "codebase-memory-mcp (installs its own MCP server + Claude Code hooks — see https://github.com/DeusData/codebase-memory-mcp)",
     "command": "powershell",
     "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 | iex"]
+  },
+  {
+    "label": "context7 (docs MCP server setup)",
+    "command": "npx",
+    "args": ["ctx7", "setup"]
   }
 ]
