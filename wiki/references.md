@@ -64,6 +64,13 @@ Curated resources for AI agent configuration, skills, and prompt engineering.
 - [prompts.chat](https://prompts.chat) — Community prompt collection
 - [system_prompts_leaks](https://github.com/asgeirtj/system_prompts_leaks) — Leaked system prompts from major AI products
 
+## Generative AI models
+
+- [genai-models/genAI-model-list.md](genai-models/genAI-model-list.md) — chat/image/video/audio/embeddings model
+  index, plus a FOSS ComfyUI checkpoint list ([ai-models-list.md](genai-models/ai-models-list.md)), a ComfyUI
+  workflow index ([ai-workflows.md](genai-models/ai-workflows.md)), and local llama.cpp GGUF launch notes
+  ([local-llm-launch.md](genai-models/local-llm-launch.md))
+
 ## Release tracking
 
 - [ai-releases/](ai-releases/ai-releases.md) — consolidated Claude/ChatGPT/Gemini release

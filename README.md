@@ -92,3 +92,5 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   release tracker
 - [wiki/ai-agent-basics.md](wiki/ai-agent-basics.md) — six-block mental model behind the
   picks in `references.md`
+- [wiki/genai-models/](wiki/genai-models/genAI-model-list.md) — generative AI model index,
+  FOSS ComfyUI checkpoints/workflows, local LLM (llama.cpp) launch notes
