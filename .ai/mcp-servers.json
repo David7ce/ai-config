@@ -9,5 +9,9 @@
     "env": {
       "GITHUB_PERSONAL_ACCESS_TOKEN": { "fromEnv": "GITHUB_TOKEN" }
     }
+  },
+  "raindrop": {
+    "url": "https://api.raindrop.io/rest/v2/ai/mcp",
+    "type": "http"
   }
 }

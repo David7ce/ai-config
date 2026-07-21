@@ -212,13 +212,19 @@ function genMcp(targetDir, sourceDir) {
     return out;
   };
 
-  const build = (toPlaceholder, includeType) => {
+  const build = (toPlaceholder, includeStdioType) => {
     const servers = {};
     for (const [name, def] of Object.entries(source)) {
       const entry = {};
-      if (includeType) entry.type = 'stdio';
-      entry.command = def.command;
-      entry.args = def.args;
+      if (def.url) {
+        // remote server: type must be explicit in both targets, stdio is the implicit default
+        entry.type = def.type || 'http';
+        entry.url = def.url;
+      } else {
+        if (includeStdioType) entry.type = 'stdio';
+        entry.command = def.command;
+        entry.args = def.args;
+      }
       const env = resolveEnv(def.env, toPlaceholder);
       if (env) entry.env = env;
       servers[name] = entry;

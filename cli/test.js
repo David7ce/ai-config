@@ -49,6 +49,7 @@ function buildFixture(sourceDir) {
     path.join(sourceDir, 'mcp-servers.json'),
     JSON.stringify({
       demo: { command: 'npx', args: ['-y', 'demo-server'], env: { TOKEN: { fromEnv: 'DEMO_TOKEN' } } },
+      remote: { url: 'https://example.com/mcp', type: 'http' },
     })
   );
 }
@@ -134,9 +135,15 @@ async function main() {
   assert.strictEqual(claudeMcp.mcpServers.demo.env.TOKEN, '${DEMO_TOKEN}', 'Claude MCP env placeholder');
   assert.strictEqual(claudeMcp.mcpServers.demo.type, undefined, 'Claude MCP has no type field');
 
+  assert.strictEqual(claudeMcp.mcpServers.remote.type, 'http', 'Claude MCP remote server keeps explicit type: http');
+  assert.strictEqual(claudeMcp.mcpServers.remote.url, 'https://example.com/mcp', 'Claude MCP remote server url');
+  assert.strictEqual(claudeMcp.mcpServers.remote.command, undefined, 'Claude MCP remote server has no command');
+
   const vscodeMcp = JSON.parse(fs.readFileSync(path.join(targetDir, '.vscode/mcp.json'), 'utf8'));
   assert.strictEqual(vscodeMcp.servers.demo.env.TOKEN, '${env:DEMO_TOKEN}', 'VS Code MCP env placeholder');
   assert.strictEqual(vscodeMcp.servers.demo.type, 'stdio', 'VS Code MCP has type: stdio');
+  assert.strictEqual(vscodeMcp.servers.remote.type, 'http', 'VS Code MCP remote server type: http');
+  assert.strictEqual(vscodeMcp.servers.remote.url, 'https://example.com/mcp', 'VS Code MCP remote server url');
 
   // scaffold: pointing at a source that doesn't exist yet should create an empty skeleton, not throw
   const scaffoldTarget = path.join(tmp, 'scaffold-target');
