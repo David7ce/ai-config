@@ -6,6 +6,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { PassThrough } = require('stream');
 const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');
 const lib = require('./lib');
@@ -48,6 +49,25 @@ function testTriStateHelpers() {
   assert.ok(afterPartialToggle.has('cats:a') && afterPartialToggle.has('cats:b'), 'toggle: toggling a "some" category selects all its items');
 
   console.log('ok — tri-state helpers');
+}
+
+async function testPickTriState() {
+  const categories = [
+    { key: 'fruit', label: 'Fruit', items: [{ key: 'apple', label: 'Apple' }, { key: 'pear', label: 'Pear' }] },
+  ];
+  const input = new PassThrough();
+  const output = new PassThrough();
+  output.resume(); // drain so the stream doesn't back up — we don't assert on prompt text here
+
+  const resultPromise = lib.pickTriState(categories, 'Pick fruit', { input, output });
+  // deselect "Apple" (item row 2: row 1 is the "Fruit" category, row 2 is "Apple"), then confirm
+  input.write('2\n');
+  input.write('\n');
+  const result = await resultPromise;
+
+  assert.ok(!result.has('fruit:apple'), 'pickTriState: deselected item is not in the result');
+  assert.ok(result.has('fruit:pear'), 'pickTriState: untouched item stays selected');
+  console.log('ok — pickTriState readline wiring');
 }
 
 function buildFixture(sourceDir) {
@@ -97,6 +117,7 @@ function buildFixture(sourceDir) {
 
 async function main() {
   testTriStateHelpers();
+  await testPickTriState();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-config-test-'));
   const sourceDir = path.join(tmp, '.ai');
   const targetDir = path.join(tmp, 'target');

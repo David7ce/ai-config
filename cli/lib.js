@@ -80,6 +80,41 @@ function toggle(selected, index, num) {
   return next;
 }
 
+// Tri-state category/item picker: same readline-only approach as pickFromMenu (no
+// arrow-key raw-mode — see its comment). Category numbers toggle every item under them at
+// once; item numbers toggle just that one. Starts fully selected so pressing Enter alone
+// reproduces "bring everything." {input, output} default to the real terminal; tests
+// inject a scripted stream instead.
+function pickTriState(categories, header, { input = process.stdin, output = process.stdout } = {}) {
+  let selected = new Set(categories.flatMap((c) => c.items.map((it) => `${c.key}:${it.key}`)));
+  const rl = readline.createInterface({ input, output });
+  return new Promise((resolve) => {
+    const prompt = () => {
+      const { lines, index } = renderMenu(categories, selected);
+      output.write(`\n${header}\n\n${lines.join('\n')}\n`);
+      rl.question(
+        '\nNumbers to toggle (categories or items, space/comma separated), "a" all, "n" none, Enter to confirm: ',
+        (answer) => {
+          const trimmed = answer.trim().toLowerCase();
+          if (!trimmed) {
+            rl.close();
+            return resolve(selected);
+          }
+          if (trimmed === 'a' || trimmed === 'all') {
+            selected = new Set(categories.flatMap((c) => c.items.map((it) => `${c.key}:${it.key}`)));
+          } else if (trimmed === 'n' || trimmed === 'none') {
+            selected = new Set();
+          } else {
+            for (const tok of trimmed.split(/[\s,]+/)) selected = toggle(selected, index, parseInt(tok, 10));
+          }
+          prompt();
+        }
+      );
+    };
+    prompt();
+  });
+}
+
 function write(targetDir, relPath, content) {
   const full = path.join(targetDir, relPath);
   fs.mkdirSync(path.dirname(full), { recursive: true });
@@ -96,4 +131,4 @@ function mirrorDir(src, dst) {
   return true;
 }
 
-module.exports = { write, mirrorDir, pickFromMenu, triState, renderMenu, toggle };
+module.exports = { write, mirrorDir, pickFromMenu, triState, renderMenu, toggle, pickTriState };
