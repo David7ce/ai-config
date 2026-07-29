@@ -86,9 +86,13 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   lines are ignored). Run `dotfiles tree --claude` to see the available names to prefix.
   Filtering is per category: a category with zero lines in the file is imported/installed
   in full — only list a category once you want to narrow it to specific items. Filtered
-  categories only add — removing an item from the manifest doesn't delete it from a machine
-  that already has it; `dotfiles list` surfaces those leftovers (`system has, not in repo`),
-  or use `dotfiles remove` for skills / re-run with `--all` to reset everything. `import` and
+  skills/hooks only add — removing an item from the manifest doesn't delete it from a
+  machine that already has it, and `dotfiles list` won't flag it either (its drift check
+  compares against the unfiltered `.ai/` listing, not your manifest); use `dotfiles remove`
+  for skills, or re-run with `--all` to reset everything. Filtered settings is different:
+  each import rebuilds `settings.json` from scratch from whatever the manifest currently
+  selects, so narrowing the manifest *does* drop a previously-included key on the next
+  import. `import` and
   `plugins` both read this file automatically, every run, no flag needed. `plugins` runs
   `.ai/plugins.json`, package-manager style, kept as its own step since it hits the network
   and installs software or registers MCP servers. `--all` means two things at once: it
