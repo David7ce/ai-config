@@ -77,21 +77,23 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
 - Project-scoped MCP servers (this project's, shared via git): edit `.ai/mcp-servers.json`,
   then `node cli/index.js --mcp`.
 - Applying this machine's dotfiles (currently Claude Code only): `node cli/index.js dotfiles
-  list` / `import [--select]` / `plugins` / `tree` — see [cli/dotfiles.js](cli/dotfiles.js) for flags
+  list` / `import` / `plugins` / `tree` — see [cli/dotfiles.js](cli/dotfiles.js) for flags
   and the `--home` sandbox option for testing without touching your real profile. `import`
-  only mirrors files (personal skills, settings.json); `--select` on `import` prompts for
-  which personal skills / hooks / settings.json keys / plugins.json packages to bring over
-  instead of everything, and remembers the choice per-agent in
-  `<target's homeDir>/.ai-config-selection.json` (e.g. `~/.claude/.ai-config-selection.json`
-  for Claude Code) so a later plain `dotfiles plugins` (no flags) honors it automatically —
-  `--select` only does anything on `import`; it has no effect on `plugins`, which always
-  either honors the saved selection or ignores it (see `--all` below). `plugins` runs
+  mirrors everything by default (personal skills, hooks, settings.json). To bring over a
+  subset instead, hand-write `.ai/<key>-import.txt` (e.g. `.ai/claude-import.txt`) — a
+  plain-text, versioned allowlist, one `category:item` per line (`skills:demo-skill`,
+  `hooks:demo-hook`, `settings:model`, `plugins:demo installer`; `#` comments and blank
+  lines are ignored). Run `dotfiles tree --claude` to see the available names to prefix.
+  Filtering is per category: a category with zero lines in the file is imported/installed
+  in full — only list a category once you want to narrow it to specific items. `import` and
+  `plugins` both read this file automatically, every run, no flag needed. `plugins` runs
   `.ai/plugins.json`, package-manager style, kept as its own step since it hits the network
-  and installs software or registers MCP servers. `--all` means something different per
-  command: on `import` it targets every configured agent (the picker still runs if
-  `--select` is also given); on `plugins` it ignores any saved selection and installs
-  everything, the way to start over after a selective import. `tree` prints this machine's
-  home-scope picture (personal skills, settings, plugins) generated from disk.
+  and installs software or registers MCP servers. `--all` means two things at once: it
+  targets every configured agent (no `--claude`/`--copilot`/`--gemini` needed), and it makes
+  both `import` and `plugins` ignore `.ai/<key>-import.txt` entirely and process every item
+  — the way to do a full "everything" run without editing or deleting the manifest file.
+  `tree` prints this machine's home-scope picture (personal skills, settings, plugins)
+  generated from `.ai/`, prefixed the same way manifest lines are.
 
 ## Resources
 

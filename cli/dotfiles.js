@@ -20,11 +20,17 @@
 // Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
 // content for that tool AND a confirmed home-dir path — don't guess at where another
 // tool's user config lives, a wrong guess here writes into a real profile.
+// import/plugins bring EVERYTHING across by default. To bring a subset, hand-write
+// .ai/<key>-import.txt (see readImportManifest below) — a plain-text, versioned,
+// per-category opt-in allowlist. Replaces an earlier interactive checkbox picker: a
+// manifest is diffable, reviewable, and portable across machines the way an interactive
+// prompt's machine-local answer never was (see
+// docs/superpowers/specs/2026-07-29-manifest-dotfiles-import-design.md).
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
-const { mirrorDir, pickFromMenu, pickTriState } = require('./lib');
+const { mirrorDir, pickFromMenu } = require('./lib');
 
 // dirName, not a precomputed absolute path: lets --home override where "home" is (see run()),
 // so `import` can be pointed at a scratch dir instead of the real profile for testing.
@@ -58,10 +64,7 @@ async function pickTargets(flags, targets) {
   const byFlag = targets.filter((t) => flags.has(t.key));
   if (byFlag.length) return byFlag;
   if (flags.has('all')) return targets;
-  // 'select' is a recognized action flag, not a target key — don't let it trip the
-  // "unrecognized flag" fail-safe below.
-  const unknownFlags = [...flags].filter((f) => f !== 'select');
-  if (unknownFlags.length > 0) return []; // an unrecognized flag was passed — fail safe, don't guess
+  if (flags.size > 0) return []; // an unrecognized flag was passed — fail safe, don't guess
   const picked = await pickFromMenu(
     targets.map((t) => ({ key: t.key, label: t.label, extra: t.homeDir })),
     'AI Config dotfiles — which agent do you want to import into this machine?'
@@ -101,51 +104,33 @@ function claudeInstallId(step) {
   return m ? m[1] : null;
 }
 
-// Reads what's actually in .ai/ for this target and turns it into the categories/items
-// shape pickTriState expects. Only non-empty categories are included — nothing to show for
-// a category with nothing in it. Item keys are the bare names (skill folder name, hook
-// filename, settings.json key, plugins.json label); importOne/pluginsOne namespace them
-// with the category key (e.g. "skills:demo-skill") to build the flat selection Set.
-function buildCategories(sourceDir, target) {
-  const categories = [];
-
-  const skills = listDirNames(personalSkillsDir(sourceDir));
-  if (skills.length) categories.push({ key: 'skills', label: 'skills/personal/', items: skills.map((s) => ({ key: s, label: s })) });
-
-  const hooks = listFileNames(sourceHooksDir(sourceDir, target));
-  if (hooks.length) categories.push({ key: 'hooks', label: `${target.key}-hooks/`, items: hooks.map((h) => ({ key: h, label: h })) });
-
-  const settingsSrc = settingsFile(sourceDir, target);
-  if (fs.existsSync(settingsSrc)) {
-    const keys = Object.keys(JSON.parse(fs.readFileSync(settingsSrc, 'utf8')));
-    if (keys.length) categories.push({ key: 'settings', label: `${target.key}-settings.json`, items: keys.map((k) => ({ key: k, label: k })) });
-  }
-
-  const pluginsFile = personalPluginsFile(sourceDir);
-  if (fs.existsSync(pluginsFile)) {
-    const labels = JSON.parse(fs.readFileSync(pluginsFile, 'utf8')).map((p) => p.label);
-    if (labels.length) categories.push({ key: 'plugins', label: 'plugins.json', items: labels.map((l) => ({ key: l, label: l })) });
-  }
-
-  return categories;
+// Manifest file per target: .ai/<key>-import.txt — versioned, plain-text, one
+// "category:item" per line (# comments and blank lines ignored). Read fresh from .ai/
+// every run, so there's nothing to persist per machine (unlike the old interactive
+// picker's .ai-config-selection.json — see header comment).
+function importManifestFile(sourceDir, target) {
+  return path.join(sourceDir, `${target.key}-import.txt`);
 }
 
-// Machine-local runtime state (which items were kept/skipped by the last `import
-// --select`) — deliberately NOT under .ai/, same reasoning the header comment already
-// gives for why plugins/ cache and ide/ stay untracked: reproducible, not source of truth.
-function selectionFile(target) {
-  return path.join(target.homeDir, '.ai-config-selection.json');
-}
-
-function loadSelection(target) {
-  const file = selectionFile(target);
+function readImportManifest(sourceDir, target) {
+  const file = importManifestFile(sourceDir, target);
   if (!fs.existsSync(file)) return null;
-  return new Set(JSON.parse(fs.readFileSync(file, 'utf8')));
+  const lines = fs
+    .readFileSync(file, 'utf8')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
+  return new Set(lines);
 }
 
-function saveSelection(target, selection) {
-  fs.mkdirSync(target.homeDir, { recursive: true });
-  fs.writeFileSync(selectionFile(target), JSON.stringify([...selection], null, 2) + '\n');
+// Per-category opt-in: a category with zero manifest lines is unfiltered (import/install
+// everything in it) — only listing at least one line for a category narrows it to those
+// items. Returns null for "unfiltered", else the Set of that category's "<prefix>:<item>"
+// keys (a subset of `manifest`, filtered to one prefix).
+function categorySelection(manifest, prefix) {
+  if (!manifest) return null;
+  const items = [...manifest].filter((k) => k.startsWith(`${prefix}:`));
+  return items.length ? new Set(items) : null;
 }
 
 function listDirNames(dir) {
@@ -213,7 +198,7 @@ function repairAbsolutePaths(target) {
   }
 }
 
-function importOne(sourceDir, target, selection = null) {
+function importOne(sourceDir, target, manifest = null) {
   const skillsSrc = personalSkillsDir(sourceDir);
   const hooksSrc = sourceHooksDir(sourceDir, target);
   const settingsSrc = settingsFile(sourceDir, target);
@@ -221,32 +206,31 @@ function importOne(sourceDir, target, selection = null) {
     throw new Error(`nothing to import for ${target.label} — none of ${skillsSrc}, ${hooksSrc}, ${settingsSrc} exist`);
   }
 
-  // A full (non-selective) import is the "start over" gesture — clear any selection saved
-  // by a previous `import --select` run so a later plain `dotfiles plugins` doesn't keep
-  // honoring a now-superseded selection.
-  if (selection === null) fs.rmSync(selectionFile(target), { force: true });
+  const skillsSelection = categorySelection(manifest, 'skills');
+  const hooksSelection = categorySelection(manifest, 'hooks');
+  const settingsSelection = categorySelection(manifest, 'settings');
 
   const liveSkillsDir = path.join(target.homeDir, 'skills');
   console.log(`\n${target.label}: ${skillsSrc} -> ${liveSkillsDir}`);
-  if (selection === null) {
+  if (skillsSelection === null) {
     mirrorDir(skillsSrc, liveSkillsDir);
   } else {
     for (const name of listDirNames(skillsSrc)) {
-      if (selection.has(`skills:${name}`)) fs.cpSync(path.join(skillsSrc, name), path.join(liveSkillsDir, name), { recursive: true });
+      if (skillsSelection.has(`skills:${name}`)) fs.cpSync(path.join(skillsSrc, name), path.join(liveSkillsDir, name), { recursive: true });
     }
   }
 
   const liveHooksDir = path.join(target.homeDir, 'hooks');
   console.log(`${target.label}: ${hooksSrc} -> ${liveHooksDir}`);
   let copiedHooks = [];
-  if (selection === null) {
+  if (hooksSelection === null) {
     if (mirrorDir(hooksSrc, liveHooksDir)) copiedHooks = listFileNames(liveHooksDir);
   } else {
     // Lazy mkdir — only create hooks/ if at least one hook is actually going to be copied,
     // symmetric with the skills branch above (which creates nothing when zero skills match).
     let hooksDirMade = false;
     for (const name of listFileNames(hooksSrc)) {
-      if (selection.has(`hooks:${name}`)) {
+      if (hooksSelection.has(`hooks:${name}`)) {
         if (!hooksDirMade) {
           fs.mkdirSync(liveHooksDir, { recursive: true });
           hooksDirMade = true;
@@ -263,11 +247,11 @@ function importOne(sourceDir, target, selection = null) {
   console.log(`${target.label}: settings.json -> ${target.homeDir}`);
   fs.mkdirSync(target.homeDir, { recursive: true });
   if (fs.existsSync(settingsSrc)) {
-    if (selection === null) {
+    if (settingsSelection === null) {
       fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'settings.json'));
     } else {
       const storeSettings = JSON.parse(fs.readFileSync(settingsSrc, 'utf8'));
-      const filtered = Object.fromEntries(Object.entries(storeSettings).filter(([k]) => selection.has(`settings:${k}`)));
+      const filtered = Object.fromEntries(Object.entries(storeSettings).filter(([k]) => settingsSelection.has(`settings:${k}`)));
       fs.writeFileSync(path.join(target.homeDir, 'settings.json'), JSON.stringify(filtered, null, 2) + '\n');
     }
   }
@@ -288,19 +272,20 @@ function importOne(sourceDir, target, selection = null) {
 // Not chained into importOne(): import stays pure file-mirroring, plugins is the explicit
 // "go install things" step (network calls, running remote scripts), same reason winget
 // asks you to type `install` rather than doing it as a side effect of anything else.
-function pluginsOne(sourceDir, target, selection = null) {
+function pluginsOne(sourceDir, target, manifest = null) {
   const file = personalPluginsFile(sourceDir);
   if (!fs.existsSync(file)) {
     console.log(`${target.label}: no plugins.json — nothing to install`);
     return;
   }
   let packages = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (selection !== null) {
+  const pluginsSelection = categorySelection(manifest, 'plugins');
+  if (pluginsSelection !== null) {
     packages = packages.filter(({ label }) => {
-      const included = selection.has(`plugins:${label}`);
+      const included = pluginsSelection.has(`plugins:${label}`);
       if (!included) {
         console.log(
-          `${target.label}: skipping ${label} (not in the saved selection — run \`dotfiles plugins --all\` to install everything)`
+          `${target.label}: skipping ${label} (not listed in .ai/${target.key}-import.txt — add "plugins:${label}" to include it, or run \`dotfiles plugins --all\`)`
         );
       }
       return included;
@@ -374,7 +359,7 @@ async function run(argv, defaultSourceDir, io = {}) {
 
   if (!['import', 'list', 'remove', 'plugins', 'tree', undefined].includes(action)) {
     console.log(
-      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--all] [--select] [name] [--source <dir>] [--home <dir>]'
+      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--all] [name] [--source <dir>] [--home <dir>]'
     );
     return;
   }
@@ -393,30 +378,11 @@ async function run(argv, defaultSourceDir, io = {}) {
 
   for (const target of selected) {
     if (action === 'import') {
-      let selection = null;
-      if (flags.has('select')) {
-        selection = await pickTriState(buildCategories(sourceDir, target), `${target.label} — choose what to bring into this machine`, io);
-        if (selection.size === 0) {
-          console.log(`${target.label}: nothing selected. Nothing to do.`);
-          continue;
-        }
-      }
-      // saveSelection runs only after a successful importOne — if importOne throws (e.g.
-      // "nothing to import"), no selection file is written, so a failed import never leaves
-      // a stale selection + empty target home dir behind (abort before touching the
-      // filesystem, no partial state).
-      importOne(sourceDir, target, selection);
-      if (flags.has('select')) saveSelection(target, selection);
+      const manifest = flags.has('all') ? null : readImportManifest(sourceDir, target);
+      importOne(sourceDir, target, manifest);
     } else if (action === 'plugins') {
-      let selection = flags.has('all') ? null : loadSelection(target);
-      // A saved selection with zero "plugins:*" keys means the user was never asked about
-      // plugins (buildCategories only emits a plugins category when plugins.json is
-      // non-empty at --select time) — treat that as "no selection" (install everything),
-      // not "selection excludes every plugin." Otherwise any package added to plugins.json
-      // after a --select run — or a --select run made before plugins.json existed — would
-      // be silently, permanently skipped.
-      if (selection && ![...selection].some((k) => k.startsWith('plugins:'))) selection = null;
-      pluginsOne(sourceDir, target, selection);
+      const manifest = flags.has('all') ? null : readImportManifest(sourceDir, target);
+      pluginsOne(sourceDir, target, manifest);
     } else if (action === 'tree') treeOne(sourceDir, target);
     else if (action === 'remove') {
       const hit = removeOne(sourceDir, target, name);
@@ -425,4 +391,4 @@ async function run(argv, defaultSourceDir, io = {}) {
   }
 }
 
-module.exports = { run, buildCategories, selectionFile, loadSelection, saveSelection, importOne, pluginsOne };
+module.exports = { run, importOne, pluginsOne, readImportManifest, importManifestFile };

@@ -6,101 +6,8 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { PassThrough } = require('stream');
 const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');
-const lib = require('./lib');
-
-function testTriStateHelpers() {
-  const categories = [
-    { key: 'cats', label: 'Cats', items: [{ key: 'a', label: 'Alpha' }, { key: 'b', label: 'Beta' }] },
-    { key: 'dogs', label: 'Dogs', items: [{ key: 'c', label: 'Gamma' }] },
-  ];
-  const allSelected = new Set(['cats:a', 'cats:b', 'dogs:c']);
-
-  assert.strictEqual(lib.triState(['cats:a', 'cats:b'], allSelected), 'all', 'triState: all selected');
-  assert.strictEqual(lib.triState(['cats:a', 'cats:b'], new Set()), 'none', 'triState: none selected');
-  assert.strictEqual(lib.triState(['cats:a', 'cats:b'], new Set(['cats:a'])), 'some', 'triState: partially selected');
-
-  const { lines, index } = lib.renderMenu(categories, allSelected);
-  assert.strictEqual(lines.length, 5, 'renderMenu: one row per category + one per item (2 categories, 3 items)');
-  assert.match(lines[0], /\[x\] Cats/, 'renderMenu: fully-selected category shows [x]');
-  assert.match(lines[1], /\[x\] Alpha/, 'renderMenu: selected item shows [x]');
-  assert.strictEqual(index.size, 5, 'renderMenu: index has one entry per numbered row');
-
-  // toggling the "Cats" category row (its number has 2 itemKeys) clears both children
-  const catsRowNum = [...index.entries()].find(([, e]) => e.itemKeys.length === 2)[0];
-  const afterCategoryToggle = lib.toggle(allSelected, index, catsRowNum);
-  assert.ok(!afterCategoryToggle.has('cats:a') && !afterCategoryToggle.has('cats:b'), 'toggle: category toggle clears all its items when fully selected');
-  assert.ok(afterCategoryToggle.has('dogs:c'), "toggle: category toggle doesn't touch other categories");
-  assert.ok(allSelected.has('cats:a'), 'toggle: does not mutate the input Set');
-
-  // toggling a single item row only flips that one item
-  const alphaRowNum = [...index.entries()].find(([, e]) => e.itemKeys[0] === 'cats:a' && e.itemKeys.length === 1)[0];
-  const afterItemToggle = lib.toggle(allSelected, index, alphaRowNum);
-  assert.ok(!afterItemToggle.has('cats:a'), 'toggle: item toggle deselects that item');
-  assert.ok(afterItemToggle.has('cats:b'), "toggle: item toggle doesn't touch its sibling");
-
-  // toggling a category that's only partly selected selects the rest (opposite of 'all')
-  const partial = new Set(['cats:a']);
-  const { index: partialIndex } = lib.renderMenu(categories, partial);
-  const catsRowNum2 = [...partialIndex.entries()].find(([, e]) => e.itemKeys.length === 2)[0];
-  const afterPartialToggle = lib.toggle(partial, partialIndex, catsRowNum2);
-  assert.ok(afterPartialToggle.has('cats:a') && afterPartialToggle.has('cats:b'), 'toggle: toggling a "some" category selects all its items');
-
-  // Finding #8 (opportunistic, defense in depth): buildCategories never emits an empty
-  // category today, so this is unreachable in practice — but a zero-item category entry
-  // must still be a safe no-op, not push `undefined` into the Set (the old `> 1` check
-  // would fall into the single-item destructuring branch for a 0-length array).
-  const zeroItemIndex = new Map([[1, { itemKeys: [] }]]);
-  const beforeZeroItem = new Set(['x']);
-  const afterZeroItem = lib.toggle(beforeZeroItem, zeroItemIndex, 1);
-  assert.deepStrictEqual(afterZeroItem, beforeZeroItem, 'toggle: a hypothetical zero-item category entry is a safe no-op');
-  assert.ok(!afterZeroItem.has(undefined), 'toggle: a zero-item category entry never pushes undefined into the Set');
-
-  console.log('ok — tri-state helpers');
-}
-
-async function testPickTriState() {
-  const categories = [
-    { key: 'fruit', label: 'Fruit', items: [{ key: 'apple', label: 'Apple' }, { key: 'pear', label: 'Pear' }] },
-  ];
-  const input = new PassThrough();
-  const output = new PassThrough();
-  output.resume(); // drain so the stream doesn't back up — we don't assert on prompt text here
-
-  const resultPromise = lib.pickTriState(categories, 'Pick fruit', { input, output });
-  // deselect "Apple" (item row 2: row 1 is the "Fruit" category, row 2 is "Apple"), then confirm
-  input.write('2\n');
-  input.write('\n');
-  const result = await resultPromise;
-
-  assert.ok(!result.has('fruit:apple'), 'pickTriState: deselected item is not in the result');
-  assert.ok(result.has('fruit:pear'), 'pickTriState: untouched item stays selected');
-  console.log('ok — pickTriState readline wiring');
-}
-
-// Finding #2: EOF on the input stream (piped input ending, Ctrl-D, a script that doesn't
-// supply the trailing confirm blank line) before the picker ever confirms must not resolve
-// to the in-progress selection (that would silently "confirm" an accidental Ctrl-D and
-// potentially import everything) — it must resolve to an empty Set, routing into run()'s
-// existing "nothing selected. Nothing to do." abort path.
-async function testPickTriStateEOF() {
-  const categories = [
-    { key: 'fruit', label: 'Fruit', items: [{ key: 'apple', label: 'Apple' }, { key: 'pear', label: 'Pear' }] },
-  ];
-  const input = new PassThrough();
-  const output = new PassThrough();
-  output.resume();
-
-  const resultPromise = lib.pickTriState(categories, 'Pick fruit', { input, output });
-  input.write('1\n'); // toggle apple off, but never send the confirming blank line
-  input.end(); // simulate EOF before confirmation
-  const result = await resultPromise;
-
-  assert.strictEqual(result.size, 0, 'pickTriState: EOF before confirming resolves to an empty Set, not the in-progress selection');
-  console.log('ok — pickTriState EOF safety');
-}
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -148,9 +55,6 @@ function buildFixture(sourceDir) {
 }
 
 async function main() {
-  testTriStateHelpers();
-  await testPickTriState();
-  await testPickTriStateEOF();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-config-test-'));
   const sourceDir = path.join(tmp, '.ai');
   const targetDir = path.join(tmp, 'target');
@@ -288,22 +192,22 @@ async function main() {
   fs.writeFileSync(path.join(sourceDir, 'claude-settings.json'), '{"model":"test"}\n');
 
   const claudeTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(tmp, 'fake-home', '.claude') };
-  const categories = dotfiles.buildCategories(sourceDir, claudeTarget);
-  assert.deepStrictEqual(
-    categories.map((c) => c.key),
-    ['skills', 'hooks', 'settings'],
-    'buildCategories: includes skills/hooks/settings (plugins.json not written yet at this point in the fixture), skips empty ones'
-  );
-  assert.deepStrictEqual(categories.find((c) => c.key === 'skills').items, [{ key: 'demo-skill', label: 'demo-skill' }], 'buildCategories: skills items come from skills/personal/');
-  assert.deepStrictEqual(categories.find((c) => c.key === 'settings').items, [{ key: 'model', label: 'model' }], 'buildCategories: settings items are the top-level keys of claude-settings.json');
+  assert.strictEqual(dotfiles.readImportManifest(sourceDir, claudeTarget), null, 'readImportManifest: null when .ai/claude-import.txt does not exist');
 
-  const selectionPath = dotfiles.selectionFile(claudeTarget);
-  assert.strictEqual(selectionPath, path.join(claudeTarget.homeDir, '.ai-config-selection.json'), 'selectionFile: lives directly under homeDir');
-  assert.strictEqual(dotfiles.loadSelection(claudeTarget), null, 'loadSelection: null when no file exists yet');
-  dotfiles.saveSelection(claudeTarget, new Set(['skills:demo-skill']));
-  const loaded = dotfiles.loadSelection(claudeTarget);
-  assert.ok(loaded.has('skills:demo-skill') && loaded.size === 1, 'loadSelection: round-trips what saveSelection wrote');
-  fs.rmSync(selectionPath); // clean up so it doesn't leak into the later real import test below
+  // readImportManifest / per-category opt-in unit coverage, independent of the end-to-end
+  // behavior asserted further below.
+  {
+    const manifestUnitSource = path.join(tmp, 'manifest-unit-source');
+    fs.mkdirSync(manifestUnitSource, { recursive: true });
+    fs.writeFileSync(
+      path.join(manifestUnitSource, 'claude-import.txt'),
+      '# a comment\n\n  skills:demo-skill  \nsettings:model\n'
+    );
+    const unitTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(tmp, 'manifest-unit-home') };
+    const manifest = dotfiles.readImportManifest(manifestUnitSource, unitTarget);
+    assert.deepStrictEqual([...manifest].sort(), ['settings:model', 'skills:demo-skill'], 'readImportManifest: comments/blanks stripped, lines trimmed');
+    assert.strictEqual(dotfiles.readImportManifest(manifestUnitSource, { key: 'gemini' }), null, 'readImportManifest: null for a target with no manifest file, even when another target has one');
+  }
 
   const fakeHome = path.join(tmp, 'fake-home');
 
@@ -344,62 +248,56 @@ async function main() {
   const selectiveSettings = JSON.parse(fs.readFileSync(path.join(selectHome, '.claude/settings.json'), 'utf8'));
   assert.deepStrictEqual(selectiveSettings, { model: 'test' }, 'selective import: only the selected settings.json key is kept');
 
-  // Finding #7 (opportunistic): a selective import with zero hooks selected must not create
-  // an empty hooks/ dir — symmetric with the skills branch above, which creates nothing when
-  // zero skills match.
+  // Per-category opt-in fallback: a manifest that only mentions skills: leaves
+  // hooks/settings unfiltered (imported in full) — the safety property the design chose
+  // over "whole-file-exhaustive" (see
+  // docs/superpowers/specs/2026-07-29-manifest-dotfiles-import-design.md).
+  const fallbackHome = path.join(tmp, 'fallback-home');
+  const fallbackTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(fallbackHome, '.claude') };
+  dotfiles.importOne(sourceDir, fallbackTarget, new Set(['skills:demo-skill'])); // no hooks:/settings: lines at all
+  assert.ok(!fs.existsSync(path.join(fallbackHome, '.claude/skills/second-skill')), 'per-category opt-in: mentioned category (skills) is filtered');
+  assert.ok(fs.existsSync(path.join(fallbackHome, '.claude/hooks/demo-hook')), 'per-category opt-in: unmentioned category (hooks) still imports in full');
+  const fallbackSettings = JSON.parse(fs.readFileSync(path.join(fallbackHome, '.claude/settings.json'), 'utf8'));
+  assert.deepStrictEqual(fallbackSettings, { model: 'test', theme: 'auto' }, 'per-category opt-in: unmentioned category (settings) still imports in full');
+
+  // Finding #7 (opportunistic): a selective import with the hooks category mentioned but
+  // matching nothing must not create an empty hooks/ dir — symmetric with the skills
+  // branch above. (Omitting hooks: entirely would hit the per-category opt-in fallback
+  // tested above instead — this uses a non-matching hooks: line to stay in the "mentioned
+  // but empty" branch.)
   const noHooksHome = path.join(tmp, 'no-hooks-home');
   const noHooksTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(noHooksHome, '.claude') };
-  dotfiles.importOne(sourceDir, noHooksTarget, new Set(['skills:demo-skill'])); // no hooks:* key selected
+  dotfiles.importOne(sourceDir, noHooksTarget, new Set(['skills:demo-skill', 'hooks:nonexistent-hook']));
   assert.ok(
     !fs.existsSync(path.join(noHooksTarget.homeDir, 'hooks')),
-    'selective import creates no hooks/ dir when zero hooks are selected (finding #7)'
+    'selective import creates no hooks/ dir when the hooks category is mentioned but matches nothing (finding #7)'
   );
 
-  // --select flag end-to-end: pickTargets must not treat a bare "--select" (no --claude/
-  // --all) as an unrecognized flag and select zero agents — that trap exists because
-  // pickTargets fails safe on any flag it doesn't recognize as a target key.
+  // Manifest end-to-end: .ai/claude-import.txt drives `dotfiles import` with no flag at
+  // all — presence of the file alone triggers filtering, replacing the old --select flag.
   {
-    const io = { input: new PassThrough(), output: new PassThrough() };
-    io.output.resume();
-    const selectHome2 = path.join(tmp, 'select-home-2');
-    const selectTarget2 = { key: 'claude', label: 'Claude Code', homeDir: path.join(selectHome2, '.claude') };
-    const { lines, index } = lib.renderMenu(dotfiles.buildCategories(sourceDir, selectTarget2), new Set(['skills:demo-skill', 'skills:second-skill', 'hooks:demo-hook', 'settings:model', 'settings:theme']));
-    const deselectNum = [...index.entries()].find(([, e]) => e.itemKeys[0] === 'settings:theme' && e.itemKeys.length === 1)[0];
-    const runPromise = dotfiles.run(['import', '--select', '--claude', '--home', selectHome2], sourceDir, io);
-    io.input.write(`${deselectNum}\n`);
-    io.input.write('\n');
-    await runPromise;
+    const manifestFile = dotfiles.importManifestFile(sourceDir, claudeTarget);
+    fs.writeFileSync(manifestFile, '# comment lines and blank lines are ignored\n\nskills:demo-skill\nsettings:model\n');
 
-    const settingsAfterSelect = JSON.parse(fs.readFileSync(path.join(selectHome2, '.claude/settings.json'), 'utf8'));
-    assert.deepStrictEqual(settingsAfterSelect, { model: 'test' }, '--select end-to-end: deselected settings key excluded, others kept');
-    assert.ok(fs.existsSync(path.join(selectHome2, '.claude/skills/second-skill')), '--select end-to-end: items never touched during the prompt stay selected (default all)');
+    const manifestHome = path.join(tmp, 'manifest-home');
+    await dotfiles.run(['import', '--claude', '--home', manifestHome], sourceDir);
 
-    const savedSelection = dotfiles.loadSelection(selectTarget2);
-    assert.ok(savedSelection && !savedSelection.has('settings:theme'), '--select end-to-end: the resolved selection is persisted to .ai-config-selection.json');
-  }
+    assert.ok(fs.existsSync(path.join(manifestHome, '.claude/skills/demo-skill')), 'manifest end-to-end: listed skill is materialized');
+    assert.ok(!fs.existsSync(path.join(manifestHome, '.claude/skills/second-skill')), 'manifest end-to-end: unlisted skill in a mentioned category is NOT materialized');
+    assert.ok(fs.existsSync(path.join(manifestHome, '.claude/hooks/demo-hook')), 'manifest end-to-end: hooks (not mentioned in the manifest) still imports in full');
+    const manifestSettings = JSON.parse(fs.readFileSync(path.join(manifestHome, '.claude/settings.json'), 'utf8'));
+    assert.deepStrictEqual(manifestSettings, { model: 'test' }, 'manifest end-to-end: only the listed settings.json key is kept');
 
-  // Finding #3: a later plain (non-selective) `dotfiles import` must clear any selection
-  // saved by a previous `--select` run — otherwise a subsequent `dotfiles plugins` would
-  // keep honoring a stale, superseded selection even though the user just did an
-  // unrestricted "bring everything" import.
-  {
-    const clearHome = path.join(tmp, 'clear-selection-home');
-    const clearTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(clearHome, '.claude') };
-    dotfiles.saveSelection(clearTarget, new Set(['skills:demo-skill']));
-    assert.ok(fs.existsSync(dotfiles.selectionFile(clearTarget)), 'sanity: selection file exists before the plain import');
+    // --all bypasses the manifest entirely, even though the file still exists.
+    const manifestAllHome = path.join(tmp, 'manifest-all-home');
+    await dotfiles.run(['import', '--claude', '--all', '--home', manifestAllHome], sourceDir);
+    assert.ok(fs.existsSync(path.join(manifestAllHome, '.claude/skills/second-skill')), '--all bypasses the manifest even when it exists');
 
-    await dotfiles.run(['import', '--claude', '--home', clearHome], sourceDir); // plain import, no --select
-
-    assert.ok(
-      !fs.existsSync(dotfiles.selectionFile(clearTarget)),
-      'a plain (non-selective) import clears a previously saved selection file (finding #3)'
-    );
+    fs.rmSync(manifestFile); // don't leak into later assertions in this file
   }
 
   // Finding #6 (opportunistic): if importOne throws (e.g. .ai/ only has plugins.json, none
-  // of skills/hooks/settings for importOne to work with), saveSelection must NOT already
-  // have run — no orphaned selection file or empty target home dir left behind. This only
-  // holds because run() now calls importOne before saveSelection.
+  // of skills/hooks/settings for it to work with), no target home dir should be left behind.
   {
     const throwSourceDir = path.join(tmp, 'throw-source');
     fs.mkdirSync(throwSourceDir, { recursive: true });
@@ -409,43 +307,14 @@ async function main() {
     );
     const throwHome = path.join(tmp, 'throw-home');
     const throwTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(throwHome, '.claude') };
-    const io = { input: new PassThrough(), output: new PassThrough() };
-    io.output.resume();
-    const runPromise = dotfiles.run(['import', '--select', '--claude', '--home', throwHome], throwSourceDir, io);
-    io.input.write('\n'); // confirm with everything selected (only the plugins category exists)
     let threw = false;
     try {
-      await runPromise;
+      await dotfiles.run(['import', '--claude', '--home', throwHome], throwSourceDir);
     } catch {
       threw = true;
     }
     assert.ok(threw, 'sanity: importOne throws when .ai/ has only plugins.json (no skills/hooks/settings)');
-    assert.ok(
-      !fs.existsSync(dotfiles.selectionFile(throwTarget)),
-      'a throwing importOne must not leave a selection file behind (finding #6)'
-    );
-    assert.ok(
-      !fs.existsSync(throwTarget.homeDir),
-      'a throwing importOne must not leave an empty target home dir behind (finding #6)'
-    );
-  }
-
-  // Confirming with nothing selected must abort before touching the filesystem, same as
-  // pickTargets's existing "Nothing selected" fail-safe for agent selection.
-  {
-    const io = { input: new PassThrough(), output: new PassThrough() };
-    io.output.resume();
-    const emptyHome = path.join(tmp, 'select-home-empty');
-    const emptyLogs = [];
-    const origLog = console.log;
-    console.log = (...a) => emptyLogs.push(a.join(' '));
-    const runPromise = dotfiles.run(['import', '--select', '--claude', '--home', emptyHome], sourceDir, io);
-    io.input.write('n\n'); // deselect everything
-    io.input.write('\n'); // confirm
-    await runPromise;
-    console.log = origLog;
-    assert.match(emptyLogs.join('\n'), /nothing to do/i, '--select with nothing selected: prints an abort message');
-    assert.ok(!fs.existsSync(emptyHome), '--select with nothing selected: never creates the target home dir');
+    assert.ok(!fs.existsSync(throwTarget.homeDir), 'a throwing importOne must not leave an empty target home dir behind (finding #6)');
   }
 
   if (process.platform !== 'win32') {
@@ -496,13 +365,6 @@ async function main() {
     ])
   );
 
-  const categoriesWithPlugins = dotfiles.buildCategories(sourceDir, claudeTarget);
-  assert.deepStrictEqual(
-    categoriesWithPlugins.find((c) => c.key === 'plugins').items,
-    [{ key: 'demo installer', label: 'demo installer' }, { key: 'shell-demo', label: 'shell-demo' }],
-    'buildCategories: plugins items come from plugins.json labels, in file order'
-  );
-
   // pluginsOne with an explicit selection: only the selected package's install steps run.
   // Capture stdout the same way the later `list`/`tree` tests already do.
   const pluginLogs = [];
@@ -514,7 +376,7 @@ async function main() {
   assert.match(pluginOutput, /demo installer/, 'selective plugins: selected package still runs');
   assert.match(
     pluginOutput,
-    /skipping shell-demo \(not in the saved selection/,
+    /skipping shell-demo \(not listed in \.ai\/claude-import\.txt/,
     'selective plugins: unselected package prints a visible skip line instead of silently doing nothing (finding #1)'
   );
   assert.doesNotMatch(
@@ -523,21 +385,11 @@ async function main() {
     "selective plugins: unselected package's install steps do not actually run"
   );
 
-  // Findings #1 and #4: `dotfiles plugins`, run end-to-end through run() (no --select flow,
-  // no direct pluginsOne call), must actually honor a saved selection, and `--all` must
-  // bypass it. Uses its own fixture (both packages run `node --version`, not the real
-  // shell-demo installer above) so this doesn't make a real network call.
+  // dotfiles plugins honors the manifest's plugins: lines (per-category opt-in, same
+  // mechanism as import); --all bypasses it; a manifest that never mentions plugins:
+  // installs everything (the general per-category fallback, not a special case anymore —
+  // see docs/superpowers/specs/2026-07-29-manifest-dotfiles-import-design.md).
   {
-    const pluginsSourceDir = path.join(tmp, 'plugins-source');
-    fs.mkdirSync(pluginsSourceDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(pluginsSourceDir, 'plugins.json'),
-      JSON.stringify([
-        { label: 'kept-package', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
-        { label: 'excluded-package', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
-      ])
-    );
-
     const capture = async (fn) => {
       const captured = [];
       const orig = console.log;
@@ -550,35 +402,41 @@ async function main() {
       return captured.join('\n');
     };
     const dollarLineCount = (output) => output.split('\n').filter((l) => l.trim().startsWith('$ ')).length;
+    const twoPackagesFixture = () => ([
+      { label: 'kept-package', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
+      { label: 'excluded-package', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
+    ]);
 
-    // Case 1: a saved selection excluding "excluded-package" — plain `dotfiles plugins`
-    // (no --select/--all) must honor it: only "kept-package" actually runs its install step.
+    // Case 1: a manifest listing only "plugins:kept-package" — plain `dotfiles plugins`
+    // (no flags) honors it: only "kept-package" actually runs its install step.
+    const honoredSourceDir = path.join(tmp, 'plugins-source-honored');
+    fs.mkdirSync(honoredSourceDir, { recursive: true });
+    fs.writeFileSync(path.join(honoredSourceDir, 'plugins.json'), JSON.stringify(twoPackagesFixture()));
+    fs.writeFileSync(path.join(honoredSourceDir, 'claude-import.txt'), 'plugins:kept-package\n');
     const honoredHome = path.join(tmp, 'plugins-home-honored');
-    const honoredTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(honoredHome, '.claude') };
-    dotfiles.saveSelection(honoredTarget, new Set(['plugins:kept-package']));
-    const honoredOutput = await capture(() => dotfiles.run(['plugins', '--claude', '--home', honoredHome], pluginsSourceDir));
-    assert.strictEqual(dollarLineCount(honoredOutput), 1, 'run(plugins): only the included package actually installs when a saved selection exists (finding #4)');
+    const honoredOutput = await capture(() => dotfiles.run(['plugins', '--claude', '--home', honoredHome], honoredSourceDir));
+    assert.strictEqual(dollarLineCount(honoredOutput), 1, 'run(plugins): only the listed package actually installs when a manifest mentions plugins:');
     assert.match(honoredOutput, /skipping excluded-package/, 'run(plugins): excluded package prints a skip line');
 
-    // Case 2: --all bypasses the saved selection entirely — both packages run.
-    const allOutput = await capture(() => dotfiles.run(['plugins', '--claude', '--all', '--home', honoredHome], pluginsSourceDir));
-    assert.strictEqual(dollarLineCount(allOutput), 2, 'run(plugins --all): saved selection is bypassed, both packages install (finding #4)');
-    assert.doesNotMatch(allOutput, /skipping/, 'run(plugins --all): no skip line since the selection is bypassed entirely');
+    // Case 2: --all bypasses the manifest entirely — both packages run.
+    const allOutput = await capture(() => dotfiles.run(['plugins', '--claude', '--all', '--home', honoredHome], honoredSourceDir));
+    assert.strictEqual(dollarLineCount(allOutput), 2, 'run(plugins --all): manifest is bypassed, both packages install');
+    assert.doesNotMatch(allOutput, /skipping/, 'run(plugins --all): no skip line since the manifest is bypassed entirely');
 
-    // Case 3 (finding #1, the critical one): a selection saved before plugins.json existed
-    // (or when it was empty) has zero "plugins:*" keys at all — that must be treated as
-    // "never asked about plugins" (install everything), not "asked and excluded every
-    // plugin." Before the fix, this silently installed nothing.
-    const neverAskedHome = path.join(tmp, 'plugins-home-never-asked');
-    const neverAskedTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(neverAskedHome, '.claude') };
-    dotfiles.saveSelection(neverAskedTarget, new Set(['skills:some-skill'])); // no plugins:* keys at all
-    const neverAskedOutput = await capture(() => dotfiles.run(['plugins', '--claude', '--home', neverAskedHome], pluginsSourceDir));
+    // Case 3 (per-category opt-in fallback): a manifest that exists but never mentions
+    // plugins: at all — e.g. it only curates skills — must install every plugin, not zero.
+    const neverMentionedSourceDir = path.join(tmp, 'plugins-source-never-mentioned');
+    fs.mkdirSync(neverMentionedSourceDir, { recursive: true });
+    fs.writeFileSync(path.join(neverMentionedSourceDir, 'plugins.json'), JSON.stringify(twoPackagesFixture()));
+    fs.writeFileSync(path.join(neverMentionedSourceDir, 'claude-import.txt'), 'skills:some-skill\n'); // no plugins: line at all
+    const neverMentionedHome = path.join(tmp, 'plugins-home-never-mentioned');
+    const neverMentionedOutput = await capture(() => dotfiles.run(['plugins', '--claude', '--home', neverMentionedHome], neverMentionedSourceDir));
     assert.strictEqual(
-      dollarLineCount(neverAskedOutput),
+      dollarLineCount(neverMentionedOutput),
       2,
-      'run(plugins): a selection with zero plugins:* keys is treated as "never asked" — installs everything, not nothing (finding #1)'
+      'run(plugins): a manifest that never mentions plugins: installs everything, not nothing (per-category opt-in fallback)'
     );
-    assert.doesNotMatch(neverAskedOutput, /skipping/, 'run(plugins): "never asked about plugins" selection produces no skip lines');
+    assert.doesNotMatch(neverMentionedOutput, /skipping/, 'run(plugins): no skip lines when plugins: was never mentioned');
   }
 
   await dotfiles.run(['plugins', '--claude', '--home', fakeHome], sourceDir); // just confirm it doesn't throw
