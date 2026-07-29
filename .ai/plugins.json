@@ -101,5 +101,11 @@
       { "agent": "claude", "shell": "claude plugin marketplace add DietrichGebert/ponytail && claude plugin install ponytail@ponytail --scope user" },
       { "agent": "codex", "command": "codex", "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail", "codex"] }
     ]
+  },
+  {
+    "label": "superpowers",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "superpowers@claude-plugins-official", "--scope", "user"] }
+    ]
   }
 ]
