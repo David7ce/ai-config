@@ -571,7 +571,7 @@ git commit -m "Make importOne/pluginsOne selection-aware, no behavior change whe
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `cli/test.js`, right after `const { PassThrough } = require('stream');` import area is already in place from Task 2. Insert this new block right after the Task 4 selective-import/plugins assertions and before the existing `// dotfiles remove` comment block:
+Add to `cli/test.js`. This block only needs the `skills`/`hooks`/`settings` categories (no `plugins.json` dependency), so it must go right after Task 4's **importOne** selection assertions (the ones ending in `'selective import: only the selected settings.json key is kept'`) and before the existing chmod-check block (`if (process.platform !== 'win32') { ... imported hook script is chmod +x ... }`) — i.e. still before the `// dotfiles remove` comment, NOT after Task 4's separate `pluginsOne` assertions (those live much later in the file, after the `plugins.json` fixture is written, past the `remove` block):
 
 ```js
   // --select flag end-to-end: pickTargets must not treat a bare "--select" (no --claude/
