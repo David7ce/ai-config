@@ -71,8 +71,7 @@ function toggle(selected, index, num) {
   if (!entry) return selected;
   const next = new Set(selected);
   if (entry.itemKeys.length !== 1) {
-    const allSelected = entry.itemKeys.every((k) => next.has(k));
-    for (const k of entry.itemKeys) (allSelected ? next.delete(k) : next.add(k));
+    for (const k of entry.itemKeys) next.delete(k);
   } else {
     const [key] = entry.itemKeys;
     next.has(key) ? next.delete(key) : next.add(key);
@@ -100,7 +99,7 @@ function pickTriState(categories, header, { input = process.stdin, output = proc
       const { lines, index } = renderMenu(categories, selected);
       output.write(`\n${header}\n\n${lines.join('\n')}\n`);
       rl.question(
-        '\nNumbers to toggle (categories or items, space/comma separated), "a" all, "n" none, Enter to confirm: ',
+        '\nNumbers to toggle (categories or items, space/comma separated); Enter confirms the current selection, "a" selects all, "n" clears all: ',
         (answer) => {
           const trimmed = answer.trim().toLowerCase();
           if (!trimmed) {
@@ -143,3 +142,4 @@ function mirrorDir(src, dst) {
 }
 
 module.exports = { write, mirrorDir, pickFromMenu, triState, renderMenu, toggle, pickTriState };
+
