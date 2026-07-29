@@ -85,15 +85,20 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   `hooks:demo-hook`, `settings:model`, `plugins:demo installer`; `#` comments and blank
   lines are ignored). Run `dotfiles tree --claude` to see the available names to prefix.
   Filtering is per category: a category with zero lines in the file is imported/installed
-  in full — only list a category once you want to narrow it to specific items. `import` and
+  in full — only list a category once you want to narrow it to specific items. Filtered
+  categories only add — removing an item from the manifest doesn't delete it from a machine
+  that already has it; `dotfiles list` surfaces those leftovers (`system has, not in repo`),
+  or use `dotfiles remove` for skills / re-run with `--all` to reset everything. `import` and
   `plugins` both read this file automatically, every run, no flag needed. `plugins` runs
   `.ai/plugins.json`, package-manager style, kept as its own step since it hits the network
   and installs software or registers MCP servers. `--all` means two things at once: it
   targets every configured agent (no `--claude`/`--copilot`/`--gemini` needed), and it makes
   both `import` and `plugins` ignore `.ai/<key>-import.txt` entirely and process every item
   — the way to do a full "everything" run without editing or deleting the manifest file.
-  `tree` prints this machine's home-scope picture (personal skills, settings, plugins)
-  generated from `.ai/`, prefixed the same way manifest lines are.
+  `tree` prints this machine's home-scope picture (personal skills, hooks, settings,
+  plugins) generated from `.ai/`, grouped under the same category names (`skills`, `hooks`,
+  `settings`, `plugins`) manifest lines use — prefix a name it lists with `category:` to
+  build a line.
 
 ## Resources
 

@@ -133,6 +133,21 @@ function categorySelection(manifest, prefix) {
   return items.length ? new Set(items) : null;
 }
 
+// Surfaces a manifest line that named a category (at least one line with that prefix
+// exists) but matched nothing on disk — a typo'd name, a trailing comment
+// ("skills:foo # note", which readImportManifest doesn't strip), or a stale entry for
+// something since removed from .ai/. Cheap enough to warn on every category, not just
+// settings — see the settings-specific guard below for why settings additionally refuses
+// to write an empty file.
+function warnUnmatched(target, prefix, selection, knownNames) {
+  if (!selection) return;
+  for (const key of selection) {
+    if (!knownNames.includes(key.slice(prefix.length + 1))) {
+      console.log(`${target.label}: warning — "${key}" in .ai/${target.key}-import.txt matches nothing, ignored`);
+    }
+  }
+}
+
 function listDirNames(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()) : [];
 }
@@ -210,6 +225,9 @@ function importOne(sourceDir, target, manifest = null) {
   const hooksSelection = categorySelection(manifest, 'hooks');
   const settingsSelection = categorySelection(manifest, 'settings');
 
+  warnUnmatched(target, 'skills', skillsSelection, listDirNames(skillsSrc));
+  warnUnmatched(target, 'hooks', hooksSelection, listFileNames(hooksSrc));
+
   const liveSkillsDir = path.join(target.homeDir, 'skills');
   console.log(`\n${target.label}: ${skillsSrc} -> ${liveSkillsDir}`);
   if (skillsSelection === null) {
@@ -251,8 +269,13 @@ function importOne(sourceDir, target, manifest = null) {
       fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'settings.json'));
     } else {
       const storeSettings = JSON.parse(fs.readFileSync(settingsSrc, 'utf8'));
+      warnUnmatched(target, 'settings', settingsSelection, Object.keys(storeSettings));
       const filtered = Object.fromEntries(Object.entries(storeSettings).filter(([k]) => settingsSelection.has(`settings:${k}`)));
-      fs.writeFileSync(path.join(target.homeDir, 'settings.json'), JSON.stringify(filtered, null, 2) + '\n');
+      if (Object.keys(filtered).length === 0 && Object.keys(storeSettings).length > 0) {
+        console.log(`${target.label}: settings.json — every settings: line in .ai/${target.key}-import.txt matched nothing; leaving settings.json as-is instead of writing {}`);
+      } else {
+        fs.writeFileSync(path.join(target.homeDir, 'settings.json'), JSON.stringify(filtered, null, 2) + '\n');
+      }
     }
   }
 
@@ -281,6 +304,7 @@ function pluginsOne(sourceDir, target, manifest = null) {
   let packages = JSON.parse(fs.readFileSync(file, 'utf8'));
   const pluginsSelection = categorySelection(manifest, 'plugins');
   if (pluginsSelection !== null) {
+    warnUnmatched(target, 'plugins', pluginsSelection, packages.map((p) => p.label));
     packages = packages.filter(({ label }) => {
       const included = pluginsSelection.has(`plugins:${label}`);
       if (!included) {
@@ -306,10 +330,11 @@ function pluginsOne(sourceDir, target, manifest = null) {
   }
 }
 
-// Everything at a glance for THIS machine: skills/personal/, <tool>-settings.json,
-// plugins.json expanded into its actual marketplace/plugin entries — not just the
-// filename. Project-scope stuff (agents, prompts) is wrap.js's job, not dotfiles' — it's
-// generated per-project, not synced to this machine's home dir, so it doesn't belong here.
+// Everything at a glance for THIS machine: skills/personal/, <tool>-hooks/,
+// <tool>-settings.json, plugins.json expanded into its actual marketplace/plugin entries —
+// not just the filename. Project-scope stuff (agents, prompts) is wrap.js's job, not
+// dotfiles' — it's generated per-project, not synced to this machine's home dir, so it
+// doesn't belong here.
 function treeOne(sourceDir, target) {
   console.log(`\n${target.label} — .ai/`);
 
@@ -317,6 +342,12 @@ function treeOne(sourceDir, target) {
   if (skills.length) {
     console.log('  skills/personal/');
     for (const s of skills) console.log(`    ${s}`);
+  }
+
+  const hooks = listFileNames(sourceHooksDir(sourceDir, target));
+  if (hooks.length) {
+    console.log(`  ${target.key}-hooks/`);
+    for (const h of hooks) console.log(`    ${h}`);
   }
 
   const settings = settingsFile(sourceDir, target);
@@ -350,7 +381,7 @@ function removeOne(sourceDir, target, name) {
   return hit;
 }
 
-async function run(argv, defaultSourceDir, io = {}) {
+async function run(argv, defaultSourceDir) {
   const { flags, opts, rest } = parseArgs(argv);
   const sourceDir = path.resolve(opts.source || defaultSourceDir);
   const homeBase = path.resolve(opts.home || os.homedir());

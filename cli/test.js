@@ -234,8 +234,8 @@ async function main() {
     '--home import writes settings.json into the scratch home'
   );
 
-  // importOne with an explicit selection — bypasses the interactive prompt entirely (same
-  // reasoning the rest of this file avoids stdin: call the underlying function directly).
+  // importOne with an explicit selection — calls importOne directly with an explicit
+  // manifest Set — unit-level, no manifest *file* needed.
   // Add a second skill/settings-key first so there's something to leave OUT.
   fs.mkdirSync(path.join(sourceDir, 'skills/personal/second-skill'), { recursive: true });
   fs.writeFileSync(path.join(sourceDir, 'skills/personal/second-skill/SKILL.md'), '# second\n');
@@ -272,6 +272,32 @@ async function main() {
     !fs.existsSync(path.join(noHooksTarget.homeDir, 'hooks')),
     'selective import creates no hooks/ dir when the hooks category is mentioned but matches nothing (finding #7)'
   );
+
+  // Final-review finding: a settings: manifest line matching nothing must not silently
+  // truncate settings.json to {} — leave any existing file untouched instead, and warn.
+  {
+    const typoSourceDir = path.join(tmp, 'typo-source');
+    fs.mkdirSync(typoSourceDir, { recursive: true });
+    fs.writeFileSync(path.join(typoSourceDir, 'claude-settings.json'), '{"model":"test"}\n');
+    const typoHome = path.join(tmp, 'typo-home');
+    const typoTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(typoHome, '.claude') };
+
+    const typoLogs = [];
+    const origLog = console.log;
+    console.log = (...a) => typoLogs.push(a.join(' '));
+    dotfiles.importOne(typoSourceDir, typoTarget, new Set(['settings:modle'])); // typo, matches nothing
+    console.log = origLog;
+    assert.ok(!fs.existsSync(path.join(typoHome, '.claude/settings.json')), 'a settings: manifest line matching nothing does not write an empty settings.json on a fresh machine');
+    assert.match(typoLogs.join('\n'), /warning — "settings:modle" .* matches nothing/, 'unmatched manifest line prints a warning');
+
+    // A matching manifest actually writes it...
+    dotfiles.importOne(typoSourceDir, typoTarget, new Set(['settings:model']));
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(typoHome, '.claude/settings.json'), 'utf8')), { model: 'test' }, 'sanity: a matching settings: line does write settings.json');
+
+    // ...and a later import with a typo'd manifest must not overwrite that existing file.
+    dotfiles.importOne(typoSourceDir, typoTarget, new Set(['settings:modle']));
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(typoHome, '.claude/settings.json'), 'utf8')), { model: 'test' }, 'a subsequent import with an unmatched settings: line leaves the existing settings.json untouched, does not overwrite it to {}');
+  }
 
   // Manifest end-to-end: .ai/claude-import.txt drives `dotfiles import` with no flag at
   // all — presence of the file alone triggers filtering, replacing the old --select flag.
@@ -466,6 +492,8 @@ async function main() {
   const treeOutput = logs.join('\n');
   assert.match(treeOutput, /skills\/personal\//, 'tree shows skills/personal/');
   assert.match(treeOutput, /demo-skill/, 'tree lists personal skill names');
+  assert.match(treeOutput, /claude-hooks\//, 'tree shows claude-hooks/');
+  assert.match(treeOutput, /demo-hook/, 'tree lists hook names');
   assert.match(treeOutput, /demo installer/, 'tree expands plugins.json labels, not just the filename');
   assert.match(treeOutput, /demo installer \[demo\]/, 'tree shows which agent(s) a package installs for');
 
