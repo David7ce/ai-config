@@ -28,7 +28,14 @@ const { mirrorDir, pickFromMenu, pickTriState } = require('./lib');
 
 // dirName, not a precomputed absolute path: lets --home override where "home" is (see run()),
 // so `import` can be pointed at a scratch dir instead of the real profile for testing.
-const DOTFILE_TARGETS = [{ key: 'claude', label: 'Claude Code', dirName: '.claude' }];
+// skills: whether this tool has a directory-based personal-skill concept at all (Gemini
+// CLI doesn't — see the design spec's research table). Every other category (hooks,
+// settings.json) already works the same way for every target with no flag needed.
+const DOTFILE_TARGETS = [
+  { key: 'claude', label: 'Claude Code', dirName: '.claude', skills: true },
+  { key: 'copilot', label: 'GitHub Copilot CLI', dirName: '.copilot', skills: true },
+  { key: 'gemini', label: 'Gemini CLI', dirName: '.gemini', skills: false },
+];
 
 function parseArgs(argv) {
   const flags = new Set();
@@ -48,9 +55,9 @@ function resolveTargets(homeBase) {
 }
 
 async function pickTargets(flags, targets) {
-  if (flags.has('all')) return targets;
   const byFlag = targets.filter((t) => flags.has(t.key));
   if (byFlag.length) return byFlag;
+  if (flags.has('all')) return targets;
   // 'select' is a recognized action flag, not a target key — don't let it trip the
   // "unrecognized flag" fail-safe below.
   const unknownFlags = [...flags].filter((f) => f !== 'select');

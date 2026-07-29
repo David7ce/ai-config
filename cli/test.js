@@ -253,6 +253,32 @@ async function main() {
   await dotfiles.run(['list', '--claude'], sourceDir);
   await dotfiles.run(['list', '--nonexistent-flag'], sourceDir);
 
+  // New DOTFILE_TARGETS entries are selectable by flag and resolve to the right label/homeDir
+  // — checked indirectly via listOne's printed header line, since DOTFILE_TARGETS/
+  // resolveTargets aren't exported (same reasoning the rest of this file already uses:
+  // exercise behavior through dotfiles.run, not internals that aren't part of the module's
+  // public surface).
+  {
+    const targetsHome = path.join(tmp, 'targets-home');
+    const logs = [];
+    const origLog = console.log;
+    console.log = (...a) => logs.push(a.join(' '));
+    await dotfiles.run(['list', '--copilot', '--home', targetsHome], sourceDir);
+    await dotfiles.run(['list', '--gemini', '--home', targetsHome], sourceDir);
+    console.log = origLog;
+    const output = logs.join('\n');
+    assert.match(
+      output,
+      new RegExp(`GitHub Copilot CLI: \\.ai/ \\(source of truth\\) vs ${path.join(targetsHome, '.copilot').replace(/[\\.]/g, '\\$&')}`),
+      'DOTFILE_TARGETS: copilot resolves to label "GitHub Copilot CLI" and homeDir <home>/.copilot'
+    );
+    assert.match(
+      output,
+      new RegExp(`Gemini CLI: \\.ai/ \\(source of truth\\) vs ${path.join(targetsHome, '.gemini').replace(/[\\.]/g, '\\$&')}`),
+      'DOTFILE_TARGETS: gemini resolves to label "Gemini CLI" and homeDir <home>/.gemini'
+    );
+  }
+
   // dotfiles import — never against the real home in an automated test. --home redirects
   // it to a scratch dir; this is also the mechanism a human uses to test import safely.
   fs.mkdirSync(path.join(sourceDir, 'skills/personal/demo-skill'), { recursive: true });
