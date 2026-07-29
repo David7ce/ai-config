@@ -203,7 +203,7 @@ function repairAbsolutePaths(target) {
   }
 }
 
-function importOne(sourceDir, target) {
+function importOne(sourceDir, target, selection = null) {
   const skillsSrc = personalSkillsDir(sourceDir);
   const hooksSrc = sourceHooksDir(sourceDir, target);
   const settingsSrc = settingsFile(sourceDir, target);
@@ -211,18 +211,45 @@ function importOne(sourceDir, target) {
     throw new Error(`nothing to import for ${target.label} — none of ${skillsSrc}, ${hooksSrc}, ${settingsSrc} exist`);
   }
 
-  console.log(`\n${target.label}: ${skillsSrc} -> ${target.homeDir}/skills`);
-  mirrorDir(skillsSrc, path.join(target.homeDir, 'skills'));
+  const liveSkillsDir = path.join(target.homeDir, 'skills');
+  console.log(`\n${target.label}: ${skillsSrc} -> ${liveSkillsDir}`);
+  if (selection === null) {
+    mirrorDir(skillsSrc, liveSkillsDir);
+  } else {
+    for (const name of listDirNames(skillsSrc)) {
+      if (selection.has(`skills:${name}`)) fs.cpSync(path.join(skillsSrc, name), path.join(liveSkillsDir, name), { recursive: true });
+    }
+  }
 
-  console.log(`${target.label}: ${hooksSrc} -> ${target.homeDir}/hooks`);
   const liveHooksDir = path.join(target.homeDir, 'hooks');
-  if (mirrorDir(hooksSrc, liveHooksDir) && process.platform !== 'win32') {
-    for (const f of fs.readdirSync(liveHooksDir)) fs.chmodSync(path.join(liveHooksDir, f), 0o755);
+  console.log(`${target.label}: ${hooksSrc} -> ${liveHooksDir}`);
+  let copiedHooks = [];
+  if (selection === null) {
+    if (mirrorDir(hooksSrc, liveHooksDir)) copiedHooks = listFileNames(liveHooksDir);
+  } else {
+    fs.mkdirSync(liveHooksDir, { recursive: true });
+    for (const name of listFileNames(hooksSrc)) {
+      if (selection.has(`hooks:${name}`)) {
+        fs.cpSync(path.join(hooksSrc, name), path.join(liveHooksDir, name));
+        copiedHooks.push(name);
+      }
+    }
+  }
+  if (copiedHooks.length && process.platform !== 'win32') {
+    for (const f of copiedHooks) fs.chmodSync(path.join(liveHooksDir, f), 0o755);
   }
 
   console.log(`${target.label}: settings.json -> ${target.homeDir}`);
   fs.mkdirSync(target.homeDir, { recursive: true });
-  if (fs.existsSync(settingsSrc)) fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'settings.json'));
+  if (fs.existsSync(settingsSrc)) {
+    if (selection === null) {
+      fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'settings.json'));
+    } else {
+      const storeSettings = JSON.parse(fs.readFileSync(settingsSrc, 'utf8'));
+      const filtered = Object.fromEntries(Object.entries(storeSettings).filter(([k]) => selection.has(`settings:${k}`)));
+      fs.writeFileSync(path.join(target.homeDir, 'settings.json'), JSON.stringify(filtered, null, 2) + '\n');
+    }
+  }
 
   repairAbsolutePaths(target);
   console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from plugins.json.`);
@@ -240,13 +267,14 @@ function importOne(sourceDir, target) {
 // Not chained into importOne(): import stays pure file-mirroring, plugins is the explicit
 // "go install things" step (network calls, running remote scripts), same reason winget
 // asks you to type `install` rather than doing it as a side effect of anything else.
-function pluginsOne(sourceDir, target) {
+function pluginsOne(sourceDir, target, selection = null) {
   const file = personalPluginsFile(sourceDir);
   if (!fs.existsSync(file)) {
     console.log(`${target.label}: no plugins.json — nothing to install`);
     return;
   }
-  const packages = JSON.parse(fs.readFileSync(file, 'utf8'));
+  let packages = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (selection !== null) packages = packages.filter((p) => selection.has(`plugins:${p.label}`));
   const quote = (a) => (/\s/.test(a) ? `"${a}"` : a);
   for (const { label, installs } of packages) {
     for (const step of installs) {
@@ -343,4 +371,4 @@ async function run(argv, defaultSourceDir) {
   }
 }
 
-module.exports = { run, buildCategories, selectionFile, loadSelection, saveSelection };
+module.exports = { run, buildCategories, selectionFile, loadSelection, saveSelection, importOne, pluginsOne };

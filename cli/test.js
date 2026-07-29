@@ -271,6 +271,20 @@ async function main() {
     '--home import writes settings.json into the scratch home'
   );
 
+  // importOne with an explicit selection — bypasses the interactive prompt entirely (same
+  // reasoning the rest of this file avoids stdin: call the underlying function directly).
+  // Add a second skill/settings-key first so there's something to leave OUT.
+  fs.mkdirSync(path.join(sourceDir, 'skills/personal/second-skill'), { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'skills/personal/second-skill/SKILL.md'), '# second\n');
+  fs.writeFileSync(path.join(sourceDir, 'claude-settings.json'), '{"model":"test","theme":"auto"}\n');
+  const selectHome = path.join(tmp, 'select-home');
+  const selectTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(selectHome, '.claude') };
+  dotfiles.importOne(sourceDir, selectTarget, new Set(['skills:demo-skill', 'hooks:demo-hook', 'settings:model']));
+  assert.ok(fs.existsSync(path.join(selectHome, '.claude/skills/demo-skill')), 'selective import: selected skill is materialized');
+  assert.ok(!fs.existsSync(path.join(selectHome, '.claude/skills/second-skill')), 'selective import: unselected skill is NOT materialized');
+  const selectiveSettings = JSON.parse(fs.readFileSync(path.join(selectHome, '.claude/settings.json'), 'utf8'));
+  assert.deepStrictEqual(selectiveSettings, { model: 'test' }, 'selective import: only the selected settings.json key is kept');
+
   if (process.platform !== 'win32') {
     const mode = fs.statSync(path.join(fakeHome, '.claude/hooks/demo-hook')).mode & 0o777;
     assert.strictEqual(mode, 0o755, 'imported hook script is chmod +x on POSIX');
@@ -325,6 +339,17 @@ async function main() {
     [{ key: 'demo installer', label: 'demo installer' }, { key: 'shell-demo', label: 'shell-demo' }],
     'buildCategories: plugins items come from plugins.json labels, in file order'
   );
+
+  // pluginsOne with an explicit selection: only the selected package's install steps run.
+  // Capture stdout the same way the later `list`/`tree` tests already do.
+  const pluginLogs = [];
+  const origLogForPlugins = console.log;
+  console.log = (...a) => pluginLogs.push(a.join(' '));
+  dotfiles.pluginsOne(sourceDir, { key: 'claude', label: 'Claude Code', homeDir: fakeHome + '/.claude' }, new Set(['plugins:demo installer']));
+  console.log = origLogForPlugins;
+  const pluginOutput = pluginLogs.join('\n');
+  assert.match(pluginOutput, /demo installer/, 'selective plugins: selected package still runs');
+  assert.doesNotMatch(pluginOutput, /shell-demo/, 'selective plugins: unselected package is skipped entirely');
 
   await dotfiles.run(['plugins', '--claude', '--home', fakeHome], sourceDir); // just confirm it doesn't throw
 
