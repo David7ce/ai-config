@@ -227,6 +227,25 @@ async function main() {
   fs.writeFileSync(path.join(sourceDir, 'skills/personal/demo-skill/SKILL.md'), '# demo\n');
   fs.writeFileSync(path.join(sourceDir, 'claude-hooks/demo-hook'), '#!/bin/bash\necho hi\n');
   fs.writeFileSync(path.join(sourceDir, 'claude-settings.json'), '{"model":"test"}\n');
+
+  const claudeTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(tmp, 'fake-home', '.claude') };
+  const categories = dotfiles.buildCategories(sourceDir, claudeTarget);
+  assert.deepStrictEqual(
+    categories.map((c) => c.key),
+    ['skills', 'hooks', 'settings'],
+    'buildCategories: includes skills/hooks/settings (plugins.json not written yet at this point in the fixture), skips empty ones'
+  );
+  assert.deepStrictEqual(categories.find((c) => c.key === 'skills').items, [{ key: 'demo-skill', label: 'demo-skill' }], 'buildCategories: skills items come from skills/personal/');
+  assert.deepStrictEqual(categories.find((c) => c.key === 'settings').items, [{ key: 'model', label: 'model' }], 'buildCategories: settings items are the top-level keys of claude-settings.json');
+
+  const selectionPath = dotfiles.selectionFile(claudeTarget);
+  assert.strictEqual(selectionPath, path.join(claudeTarget.homeDir, '.ai-config-selection.json'), 'selectionFile: lives directly under homeDir');
+  assert.strictEqual(dotfiles.loadSelection(claudeTarget), null, 'loadSelection: null when no file exists yet');
+  dotfiles.saveSelection(claudeTarget, new Set(['skills:demo-skill']));
+  const loaded = dotfiles.loadSelection(claudeTarget);
+  assert.ok(loaded.has('skills:demo-skill') && loaded.size === 1, 'loadSelection: round-trips what saveSelection wrote');
+  fs.rmSync(selectionPath); // clean up so it doesn't leak into the later real import test below
+
   const fakeHome = path.join(tmp, 'fake-home');
 
   // pre-seed a stale skill in the scratch home to prove import's mirror deletes it, not

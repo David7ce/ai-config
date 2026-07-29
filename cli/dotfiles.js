@@ -91,6 +91,53 @@ function claudeInstallId(step) {
   return m ? m[1] : null;
 }
 
+// Reads what's actually in .ai/ for this target and turns it into the categories/items
+// shape pickTriState expects. Only non-empty categories are included — nothing to show for
+// a category with nothing in it. Item keys are the bare names (skill folder name, hook
+// filename, settings.json key, plugins.json label); importOne/pluginsOne namespace them
+// with the category key (e.g. "skills:demo-skill") to build the flat selection Set.
+function buildCategories(sourceDir, target) {
+  const categories = [];
+
+  const skills = listDirNames(personalSkillsDir(sourceDir));
+  if (skills.length) categories.push({ key: 'skills', label: 'skills/personal/', items: skills.map((s) => ({ key: s, label: s })) });
+
+  const hooks = listFileNames(sourceHooksDir(sourceDir, target));
+  if (hooks.length) categories.push({ key: 'hooks', label: `${target.key}-hooks/`, items: hooks.map((h) => ({ key: h, label: h })) });
+
+  const settingsSrc = settingsFile(sourceDir, target);
+  if (fs.existsSync(settingsSrc)) {
+    const keys = Object.keys(JSON.parse(fs.readFileSync(settingsSrc, 'utf8')));
+    if (keys.length) categories.push({ key: 'settings', label: `${target.key}-settings.json`, items: keys.map((k) => ({ key: k, label: k })) });
+  }
+
+  const pluginsFile = personalPluginsFile(sourceDir);
+  if (fs.existsSync(pluginsFile)) {
+    const labels = JSON.parse(fs.readFileSync(pluginsFile, 'utf8')).map((p) => p.label);
+    if (labels.length) categories.push({ key: 'plugins', label: 'plugins.json', items: labels.map((l) => ({ key: l, label: l })) });
+  }
+
+  return categories;
+}
+
+// Machine-local runtime state (which items were kept/skipped by the last `import
+// --select`) — deliberately NOT under .ai/, same reasoning the header comment already
+// gives for why plugins/ cache and ide/ stay untracked: reproducible, not source of truth.
+function selectionFile(target) {
+  return path.join(target.homeDir, '.ai-config-selection.json');
+}
+
+function loadSelection(target) {
+  const file = selectionFile(target);
+  if (!fs.existsSync(file)) return null;
+  return new Set(JSON.parse(fs.readFileSync(file, 'utf8')));
+}
+
+function saveSelection(target, selection) {
+  fs.mkdirSync(target.homeDir, { recursive: true });
+  fs.writeFileSync(selectionFile(target), JSON.stringify([...selection], null, 2) + '\n');
+}
+
 function listDirNames(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()) : [];
 }
@@ -296,4 +343,4 @@ async function run(argv, defaultSourceDir) {
   }
 }
 
-module.exports = { run };
+module.exports = { run, buildCategories, selectionFile, loadSelection, saveSelection };
