@@ -115,7 +115,7 @@ function pickTriState(categories, header, { input = process.stdin, output = proc
           } else if (trimmed === 'n' || trimmed === 'none') {
             selected = new Set();
           } else {
-            for (const tok of trimmed.split(/[\s,]+/)) selected = toggle(selected, index, parseInt(tok, 10));
+            const tokens = trimmed.split(/[^0-9]+/).filter(Boolean); for (const tok of tokens) selected = toggle(selected, index, parseInt(tok, 10));
           }
           prompt();
         }
@@ -142,4 +142,5 @@ function mirrorDir(src, dst) {
 }
 
 module.exports = { write, mirrorDir, pickFromMenu, triState, renderMenu, toggle, pickTriState };
+
 
