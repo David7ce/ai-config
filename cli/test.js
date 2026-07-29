@@ -318,6 +318,14 @@ async function main() {
       },
     ])
   );
+
+  const categoriesWithPlugins = dotfiles.buildCategories(sourceDir, claudeTarget);
+  assert.deepStrictEqual(
+    categoriesWithPlugins.find((c) => c.key === 'plugins').items,
+    [{ key: 'demo installer', label: 'demo installer' }, { key: 'shell-demo', label: 'shell-demo' }],
+    'buildCategories: plugins items come from plugins.json labels, in file order'
+  );
+
   await dotfiles.run(['plugins', '--claude', '--home', fakeHome], sourceDir); // just confirm it doesn't throw
 
   // dotfiles list's drift check must extract "shell-demo@bar" from the {shell} step above,
