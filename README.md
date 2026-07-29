@@ -77,12 +77,15 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
 - Project-scoped MCP servers (this project's, shared via git): edit `.ai/mcp-servers.json`,
   then `node cli/index.js --mcp`.
 - Applying this machine's dotfiles (currently Claude Code only): `node cli/index.js dotfiles
-  list` / `import` / `plugins` / `tree` — see [cli/dotfiles.js](cli/dotfiles.js) for flags
+  list` / `import [--select]` / `plugins` / `tree` — see [cli/dotfiles.js](cli/dotfiles.js) for flags
   and the `--home` sandbox option for testing without touching your real profile. `import`
-  only mirrors files (personal skills, settings.json); `plugins` runs `.ai/plugins.json`,
-  package-manager style, kept as its own step since it hits the network and installs
-  software or registers MCP servers; `tree` prints this machine's home-scope picture
-  (personal skills, settings, plugins) generated from disk.
+  only mirrors files (personal skills, settings.json); `--select` on `import` prompts for
+  which personal skills / hooks / settings.json keys / plugins.json packages to bring over
+  instead of everything, and remembers the choice in `<homeDir>/.ai-config-selection.json`
+  so a later plain `dotfiles plugins` (no `--select`/`--all`) honors it automatically;
+  `plugins` runs `.ai/plugins.json`, package-manager style, kept as its own step since it
+  hits the network and installs software or registers MCP servers; `tree` prints this
+  machine's home-scope picture (personal skills, settings, plugins) generated from disk.
 
 ## Resources
 

@@ -285,6 +285,47 @@ async function main() {
   const selectiveSettings = JSON.parse(fs.readFileSync(path.join(selectHome, '.claude/settings.json'), 'utf8'));
   assert.deepStrictEqual(selectiveSettings, { model: 'test' }, 'selective import: only the selected settings.json key is kept');
 
+  // --select flag end-to-end: pickTargets must not treat a bare "--select" (no --claude/
+  // --all) as an unrecognized flag and select zero agents — that trap exists because
+  // pickTargets fails safe on any flag it doesn't recognize as a target key.
+  {
+    const io = { input: new PassThrough(), output: new PassThrough() };
+    io.output.resume();
+    const selectHome2 = path.join(tmp, 'select-home-2');
+    const selectTarget2 = { key: 'claude', label: 'Claude Code', homeDir: path.join(selectHome2, '.claude') };
+    const { lines, index } = lib.renderMenu(dotfiles.buildCategories(sourceDir, selectTarget2), new Set(['skills:demo-skill', 'skills:second-skill', 'hooks:demo-hook', 'settings:model', 'settings:theme']));
+    const deselectNum = [...index.entries()].find(([, e]) => e.itemKeys[0] === 'settings:theme' && e.itemKeys.length === 1)[0];
+    const runPromise = dotfiles.run(['import', '--select', '--claude', '--home', selectHome2], sourceDir, io);
+    io.input.write(`${deselectNum}\n`);
+    io.input.write('\n');
+    await runPromise;
+
+    const settingsAfterSelect = JSON.parse(fs.readFileSync(path.join(selectHome2, '.claude/settings.json'), 'utf8'));
+    assert.deepStrictEqual(settingsAfterSelect, { model: 'test' }, '--select end-to-end: deselected settings key excluded, others kept');
+    assert.ok(fs.existsSync(path.join(selectHome2, '.claude/skills/second-skill')), '--select end-to-end: items never touched during the prompt stay selected (default all)');
+
+    const savedSelection = dotfiles.loadSelection(selectTarget2);
+    assert.ok(savedSelection && !savedSelection.has('settings:theme'), '--select end-to-end: the resolved selection is persisted to .ai-config-selection.json');
+  }
+
+  // Confirming with nothing selected must abort before touching the filesystem, same as
+  // pickTargets's existing "Nothing selected" fail-safe for agent selection.
+  {
+    const io = { input: new PassThrough(), output: new PassThrough() };
+    io.output.resume();
+    const emptyHome = path.join(tmp, 'select-home-empty');
+    const emptyLogs = [];
+    const origLog = console.log;
+    console.log = (...a) => emptyLogs.push(a.join(' '));
+    const runPromise = dotfiles.run(['import', '--select', '--claude', '--home', emptyHome], sourceDir, io);
+    io.input.write('n\n'); // deselect everything
+    io.input.write('\n'); // confirm
+    await runPromise;
+    console.log = origLog;
+    assert.match(emptyLogs.join('\n'), /nothing to do/i, '--select with nothing selected: prints an abort message');
+    assert.ok(!fs.existsSync(emptyHome), '--select with nothing selected: never creates the target home dir');
+  }
+
   if (process.platform !== 'win32') {
     const mode = fs.statSync(path.join(fakeHome, '.claude/hooks/demo-hook')).mode & 0o777;
     assert.strictEqual(mode, 0o755, 'imported hook script is chmod +x on POSIX');

@@ -24,7 +24,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
-const { mirrorDir, pickFromMenu } = require('./lib');
+const { mirrorDir, pickFromMenu, pickTriState } = require('./lib');
 
 // dirName, not a precomputed absolute path: lets --home override where "home" is (see run()),
 // so `import` can be pointed at a scratch dir instead of the real profile for testing.
@@ -51,7 +51,10 @@ async function pickTargets(flags, targets) {
   if (flags.has('all')) return targets;
   const byFlag = targets.filter((t) => flags.has(t.key));
   if (byFlag.length) return byFlag;
-  if (flags.size > 0) return []; // an unrecognized flag was passed — fail safe, don't guess
+  // 'select' is a recognized action flag, not a target key — don't let it trip the
+  // "unrecognized flag" fail-safe below.
+  const unknownFlags = [...flags].filter((f) => f !== 'select');
+  if (unknownFlags.length > 0) return []; // an unrecognized flag was passed — fail safe, don't guess
   const picked = await pickFromMenu(
     targets.map((t) => ({ key: t.key, label: t.label, extra: t.homeDir })),
     'AI Config dotfiles — which agent do you want to import into this machine?'
@@ -334,7 +337,7 @@ function removeOne(sourceDir, target, name) {
   return hit;
 }
 
-async function run(argv, defaultSourceDir) {
+async function run(argv, defaultSourceDir, io = {}) {
   const { flags, opts, rest } = parseArgs(argv);
   const sourceDir = path.resolve(opts.source || defaultSourceDir);
   const homeBase = path.resolve(opts.home || os.homedir());
@@ -343,7 +346,7 @@ async function run(argv, defaultSourceDir) {
 
   if (!['import', 'list', 'remove', 'plugins', 'tree', undefined].includes(action)) {
     console.log(
-      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--all] [name] [--source <dir>] [--home <dir>]'
+      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--all] [--select] [name] [--source <dir>] [--home <dir>]'
     );
     return;
   }
@@ -361,9 +364,21 @@ async function run(argv, defaultSourceDir) {
   }
 
   for (const target of selected) {
-    if (action === 'import') importOne(sourceDir, target);
-    else if (action === 'plugins') pluginsOne(sourceDir, target);
-    else if (action === 'tree') treeOne(sourceDir, target);
+    if (action === 'import') {
+      let selection = null;
+      if (flags.has('select')) {
+        selection = await pickTriState(buildCategories(sourceDir, target), `${target.label} — choose what to bring into this machine`, io);
+        if (selection.size === 0) {
+          console.log(`${target.label}: nothing selected. Nothing to do.`);
+          continue;
+        }
+        saveSelection(target, selection);
+      }
+      importOne(sourceDir, target, selection);
+    } else if (action === 'plugins') {
+      const selection = flags.has('all') ? null : loadSelection(target);
+      pluginsOne(sourceDir, target, selection);
+    } else if (action === 'tree') treeOne(sourceDir, target);
     else if (action === 'remove') {
       const hit = removeOne(sourceDir, target, name);
       if (!hit) console.log(`${target.label}: skill not found: ${name}`);
