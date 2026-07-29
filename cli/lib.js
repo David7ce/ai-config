@@ -70,7 +70,7 @@ function toggle(selected, index, num) {
   const entry = index.get(num);
   if (!entry) return selected;
   const next = new Set(selected);
-  if (entry.itemKeys.length > 1) {
+  if (entry.itemKeys.length !== 1) {
     const allSelected = entry.itemKeys.every((k) => next.has(k));
     for (const k of entry.itemKeys) (allSelected ? next.delete(k) : next.add(k));
   } else {
@@ -89,6 +89,13 @@ function pickTriState(categories, header, { input = process.stdin, output = proc
   let selected = new Set(categories.flatMap((c) => c.items.map((it) => `${c.key}:${it.key}`)));
   const rl = readline.createInterface({ input, output });
   return new Promise((resolve) => {
+    // EOF before the confirming blank line (piped input, Ctrl-D, a script missing its
+    // trailing newline) must not silently resolve to "import everything" — that would be a
+    // false success. Resolve to an empty Set instead, which routes into run()'s existing
+    // "nothing selected. Nothing to do." abort path. The normal confirm path also triggers
+    // 'close' (via rl.close()), but it resolves with the real selection first — a Promise's
+    // first resolve() wins, so this listener is a no-op on that path.
+    rl.on('close', () => resolve(new Set()));
     const prompt = () => {
       const { lines, index } = renderMenu(categories, selected);
       output.write(`\n${header}\n\n${lines.join('\n')}\n`);
@@ -97,8 +104,12 @@ function pickTriState(categories, header, { input = process.stdin, output = proc
         (answer) => {
           const trimmed = answer.trim().toLowerCase();
           if (!trimmed) {
+            // Resolve BEFORE close(): close() emits 'close' synchronously, and a Promise's
+            // first resolve() wins — closing first would let the EOF listener above resolve
+            // with an empty Set instead of the real selection.
+            resolve(selected);
             rl.close();
-            return resolve(selected);
+            return;
           }
           if (trimmed === 'a' || trimmed === 'all') {
             selected = new Set(categories.flatMap((c) => c.items.map((it) => `${c.key}:${it.key}`)));

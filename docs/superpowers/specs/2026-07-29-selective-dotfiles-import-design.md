@@ -91,6 +91,20 @@ covers both the import step and the later plugin-install step, without prompting
 `--all` on either command ignores the file and processes everything (today's behavior,
 and the way to start over after a selective import).
 
+A saved selection is scoped per category by key prefix (`skills:`, `hooks:`, `settings:`,
+`plugins:`). A category the selection has zero keys for means the user was never asked
+about that category — not that they were asked and excluded everything in it. The only way
+`buildCategories` omits a category is when the underlying source is empty or absent at
+`--select` time (e.g. no `plugins.json` yet, or an empty one), so a selection saved under
+those conditions has no `plugins:*` keys at all. Later, once `plugins.json` gains content,
+`dotfiles plugins` reading that same selection must treat "zero keys in this category" as
+"include everything in this category," not "exclude everything" — otherwise every package
+added to `plugins.json` after that `--select` run would be silently, permanently skipped,
+and the documented "edit `.ai/plugins.json`, then `dotfiles plugins`" workflow would break.
+Concretely: before consulting a saved selection for a category, check whether it contains
+any key for that category at all; if not, fall back to "no selection" (include everything)
+for that category specifically.
+
 ### Materialization changes (`cli/dotfiles.js`)
 
 - `importOne`: instead of `mirrorDir`/`copyFileSync` wholesale, copy only the selected

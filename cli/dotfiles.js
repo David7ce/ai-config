@@ -214,6 +214,11 @@ function importOne(sourceDir, target, selection = null) {
     throw new Error(`nothing to import for ${target.label} — none of ${skillsSrc}, ${hooksSrc}, ${settingsSrc} exist`);
   }
 
+  // A full (non-selective) import is the "start over" gesture — clear any selection saved
+  // by a previous `import --select` run so a later plain `dotfiles plugins` doesn't keep
+  // honoring a now-superseded selection.
+  if (selection === null) fs.rmSync(selectionFile(target), { force: true });
+
   const liveSkillsDir = path.join(target.homeDir, 'skills');
   console.log(`\n${target.label}: ${skillsSrc} -> ${liveSkillsDir}`);
   if (selection === null) {
@@ -230,9 +235,15 @@ function importOne(sourceDir, target, selection = null) {
   if (selection === null) {
     if (mirrorDir(hooksSrc, liveHooksDir)) copiedHooks = listFileNames(liveHooksDir);
   } else {
-    fs.mkdirSync(liveHooksDir, { recursive: true });
+    // Lazy mkdir — only create hooks/ if at least one hook is actually going to be copied,
+    // symmetric with the skills branch above (which creates nothing when zero skills match).
+    let hooksDirMade = false;
     for (const name of listFileNames(hooksSrc)) {
       if (selection.has(`hooks:${name}`)) {
+        if (!hooksDirMade) {
+          fs.mkdirSync(liveHooksDir, { recursive: true });
+          hooksDirMade = true;
+        }
         fs.cpSync(path.join(hooksSrc, name), path.join(liveHooksDir, name));
         copiedHooks.push(name);
       }
@@ -277,7 +288,17 @@ function pluginsOne(sourceDir, target, selection = null) {
     return;
   }
   let packages = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (selection !== null) packages = packages.filter((p) => selection.has(`plugins:${p.label}`));
+  if (selection !== null) {
+    packages = packages.filter(({ label }) => {
+      const included = selection.has(`plugins:${label}`);
+      if (!included) {
+        console.log(
+          `${target.label}: skipping ${label} (not in the saved selection — run \`dotfiles plugins --all\` to install everything)`
+        );
+      }
+      return included;
+    });
+  }
   const quote = (a) => (/\s/.test(a) ? `"${a}"` : a);
   for (const { label, installs } of packages) {
     for (const step of installs) {
@@ -372,11 +393,22 @@ async function run(argv, defaultSourceDir, io = {}) {
           console.log(`${target.label}: nothing selected. Nothing to do.`);
           continue;
         }
-        saveSelection(target, selection);
       }
+      // saveSelection runs only after a successful importOne — if importOne throws (e.g.
+      // "nothing to import"), no selection file is written, so a failed import never leaves
+      // a stale selection + empty target home dir behind (abort before touching the
+      // filesystem, no partial state).
       importOne(sourceDir, target, selection);
+      if (flags.has('select')) saveSelection(target, selection);
     } else if (action === 'plugins') {
-      const selection = flags.has('all') ? null : loadSelection(target);
+      let selection = flags.has('all') ? null : loadSelection(target);
+      // A saved selection with zero "plugins:*" keys means the user was never asked about
+      // plugins (buildCategories only emits a plugins category when plugins.json is
+      // non-empty at --select time) — treat that as "no selection" (install everything),
+      // not "selection excludes every plugin." Otherwise any package added to plugins.json
+      // after a --select run — or a --select run made before plugins.json existed — would
+      // be silently, permanently skipped.
+      if (selection && ![...selection].some((k) => k.startsWith('plugins:'))) selection = null;
       pluginsOne(sourceDir, target, selection);
     } else if (action === 'tree') treeOne(sourceDir, target);
     else if (action === 'remove') {

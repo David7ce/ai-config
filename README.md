@@ -81,11 +81,17 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   and the `--home` sandbox option for testing without touching your real profile. `import`
   only mirrors files (personal skills, settings.json); `--select` on `import` prompts for
   which personal skills / hooks / settings.json keys / plugins.json packages to bring over
-  instead of everything, and remembers the choice in `<homeDir>/.ai-config-selection.json`
-  so a later plain `dotfiles plugins` (no `--select`/`--all`) honors it automatically;
-  `plugins` runs `.ai/plugins.json`, package-manager style, kept as its own step since it
-  hits the network and installs software or registers MCP servers; `tree` prints this
-  machine's home-scope picture (personal skills, settings, plugins) generated from disk.
+  instead of everything, and remembers the choice per-agent in
+  `<target's homeDir>/.ai-config-selection.json` (e.g. `~/.claude/.ai-config-selection.json`
+  for Claude Code) so a later plain `dotfiles plugins` (no flags) honors it automatically —
+  `--select` only does anything on `import`; it has no effect on `plugins`, which always
+  either honors the saved selection or ignores it (see `--all` below). `plugins` runs
+  `.ai/plugins.json`, package-manager style, kept as its own step since it hits the network
+  and installs software or registers MCP servers. `--all` means something different per
+  command: on `import` it targets every configured agent (the picker still runs if
+  `--select` is also given); on `plugins` it ignores any saved selection and installs
+  everything, the way to start over after a selective import. `tree` prints this machine's
+  home-scope picture (personal skills, settings, plugins) generated from disk.
 
 ## Resources
 
