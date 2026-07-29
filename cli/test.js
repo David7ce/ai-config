@@ -8,6 +8,47 @@ const os = require('os');
 const path = require('path');
 const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');
+const lib = require('./lib');
+
+function testTriStateHelpers() {
+  const categories = [
+    { key: 'cats', label: 'Cats', items: [{ key: 'a', label: 'Alpha' }, { key: 'b', label: 'Beta' }] },
+    { key: 'dogs', label: 'Dogs', items: [{ key: 'c', label: 'Gamma' }] },
+  ];
+  const allSelected = new Set(['cats:a', 'cats:b', 'dogs:c']);
+
+  assert.strictEqual(lib.triState(['cats:a', 'cats:b'], allSelected), 'all', 'triState: all selected');
+  assert.strictEqual(lib.triState(['cats:a', 'cats:b'], new Set()), 'none', 'triState: none selected');
+  assert.strictEqual(lib.triState(['cats:a', 'cats:b'], new Set(['cats:a'])), 'some', 'triState: partially selected');
+
+  const { lines, index } = lib.renderMenu(categories, allSelected);
+  assert.strictEqual(lines.length, 5, 'renderMenu: one row per category + one per item (2 categories, 3 items)');
+  assert.match(lines[0], /\[x\] Cats/, 'renderMenu: fully-selected category shows [x]');
+  assert.match(lines[1], /\[x\] Alpha/, 'renderMenu: selected item shows [x]');
+  assert.strictEqual(index.size, 5, 'renderMenu: index has one entry per numbered row');
+
+  // toggling the "Cats" category row (its number has 2 itemKeys) clears both children
+  const catsRowNum = [...index.entries()].find(([, e]) => e.itemKeys.length === 2)[0];
+  const afterCategoryToggle = lib.toggle(allSelected, index, catsRowNum);
+  assert.ok(!afterCategoryToggle.has('cats:a') && !afterCategoryToggle.has('cats:b'), 'toggle: category toggle clears all its items when fully selected');
+  assert.ok(afterCategoryToggle.has('dogs:c'), "toggle: category toggle doesn't touch other categories");
+  assert.ok(allSelected.has('cats:a'), 'toggle: does not mutate the input Set');
+
+  // toggling a single item row only flips that one item
+  const alphaRowNum = [...index.entries()].find(([, e]) => e.itemKeys[0] === 'cats:a' && e.itemKeys.length === 1)[0];
+  const afterItemToggle = lib.toggle(allSelected, index, alphaRowNum);
+  assert.ok(!afterItemToggle.has('cats:a'), 'toggle: item toggle deselects that item');
+  assert.ok(afterItemToggle.has('cats:b'), "toggle: item toggle doesn't touch its sibling");
+
+  // toggling a category that's only partly selected selects the rest (opposite of 'all')
+  const partial = new Set(['cats:a']);
+  const { index: partialIndex } = lib.renderMenu(categories, partial);
+  const catsRowNum2 = [...partialIndex.entries()].find(([, e]) => e.itemKeys.length === 2)[0];
+  const afterPartialToggle = lib.toggle(partial, partialIndex, catsRowNum2);
+  assert.ok(afterPartialToggle.has('cats:a') && afterPartialToggle.has('cats:b'), 'toggle: toggling a "some" category selects all its items');
+
+  console.log('ok — tri-state helpers');
+}
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -55,6 +96,7 @@ function buildFixture(sourceDir) {
 }
 
 async function main() {
+  testTriStateHelpers();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-config-test-'));
   const sourceDir = path.join(tmp, '.ai');
   const targetDir = path.join(tmp, 'target');

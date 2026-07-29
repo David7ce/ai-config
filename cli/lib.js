@@ -30,6 +30,56 @@ function pickFromMenu(items, header) {
   });
 }
 
+// Tri-state: every item in a category selected -> 'all'; none -> 'none'; otherwise 'some'.
+function triState(itemKeys, selected) {
+  const selectedCount = itemKeys.filter((k) => selected.has(k)).length;
+  if (selectedCount === 0) return 'none';
+  if (selectedCount === itemKeys.length) return 'all';
+  return 'some';
+}
+
+const TRI_STATE_MARK = { all: '[x]', none: '[ ]', some: '[~]' };
+
+// Flattens categories into numbered rows (one per category, one per item, indented) and an
+// index from displayed number back to the item key(s) it toggles — the pure half of
+// pickTriState, kept separate so the toggle math is unit-testable without touching stdin.
+// ASCII marks only (not Unicode) so output is correct regardless of terminal codepage.
+function renderMenu(categories, selected) {
+  const lines = [];
+  const index = new Map(); // number -> { itemKeys: string[] }
+  let n = 0;
+  for (const cat of categories) {
+    const itemKeys = cat.items.map((it) => `${cat.key}:${it.key}`);
+    n++;
+    index.set(n, { itemKeys });
+    lines.push(`  ${String(n).padStart(2)}) ${TRI_STATE_MARK[triState(itemKeys, selected)]} ${cat.label}`);
+    for (const it of cat.items) {
+      const key = `${cat.key}:${it.key}`;
+      n++;
+      index.set(n, { itemKeys: [key] });
+      lines.push(`  ${String(n).padStart(2)})   ${selected.has(key) ? TRI_STATE_MARK.all : TRI_STATE_MARK.none} ${it.label}`);
+    }
+  }
+  return { lines, index };
+}
+
+// Toggling a category row flips ALL its items together: if every item is currently
+// selected, deselect them all; otherwise ('none' or 'some') select them all. Toggling an
+// item row flips just that one key. Always returns a new Set — never mutates `selected`.
+function toggle(selected, index, num) {
+  const entry = index.get(num);
+  if (!entry) return selected;
+  const next = new Set(selected);
+  if (entry.itemKeys.length > 1) {
+    const allSelected = entry.itemKeys.every((k) => next.has(k));
+    for (const k of entry.itemKeys) (allSelected ? next.delete(k) : next.add(k));
+  } else {
+    const [key] = entry.itemKeys;
+    next.has(key) ? next.delete(key) : next.add(key);
+  }
+  return next;
+}
+
 function write(targetDir, relPath, content) {
   const full = path.join(targetDir, relPath);
   fs.mkdirSync(path.dirname(full), { recursive: true });
@@ -46,4 +96,4 @@ function mirrorDir(src, dst) {
   return true;
 }
 
-module.exports = { write, mirrorDir, pickFromMenu };
+module.exports = { write, mirrorDir, pickFromMenu, triState, renderMenu, toggle };
