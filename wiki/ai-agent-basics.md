@@ -65,3 +65,39 @@ config: `CLAUDE.md`, hooks, settings, permission modes).
 **Harness** runs the loop → fills **Context** each turn → pulling from **Memory**,
 **Skills**, and **Connectors** as needed → **Plugins** are how you install the last three.
 Optimize in that order: a good harness + tight context beats a big pile of plugins.
+
+## Token optimization — why plugin count is a cost, not just a feature list
+
+Every plugin isn't free just because it's installed and idle. Two different costs stack:
+- **Always-on:** skill/agent instruction text a plugin injects into *every* turn, whether
+  you use it or not — this is the number that matters for "do I have too much installed."
+- **On-invoke:** the (much larger) cost paid only when a skill actually fires.
+
+MCP servers and hooks are cheap by comparison — their tool schemas resolve at runtime and
+generally don't count against always-on budget the way skill text does. A plugin that's
+pure MCP or pure hooks (no skills/agents) tends to cost ~0 tokens/session just for being
+installed.
+
+**Worked example, from auditing this machine's Claude Code install:** `superpowers` (14
+skills, the core workflow library) costs ~688 tokens/session. `compound-engineering` —
+a different brainstorm/plan/review/compound skill pack covering the *same loop* — cost
+~3,060 (4.4×), pure duplication with nothing superpowers didn't already do. `ecc` — a
+375-skill, 67-agent do-everything bundle spanning Kotlin/Django/Laravel/HIPAA/homelab
+networking/DeFi/video-editing/customs-compliance — cost ~34,696 tokens/session (50× a
+focused plugin) for capability almost none of which applied to any actual project here.
+Both got removed; the remaining 13 plugins together cost ~3,051 tokens total — less than
+either single removed plugin alone.
+
+**Strategy:**
+1. Before installing, run `claude plugin details <plugin>[@marketplace]` — check
+   always-on tokens and skim the skill/agent list for scope creep (a plugin that claims
+   to do one thing but ships 100+ unrelated skills is a red flag, not a bonus).
+2. Check for overlap with what's already installed before adding a same-purpose plugin
+   (two brainstorm/plan/review frameworks, two of the same MCP server, etc.) — pick one.
+3. Prefer MCP-only or hooks-only plugins over skill-heavy ones when the capability is
+   equivalent; they don't tax every turn.
+4. Periodically diff installed plugins against what's actually been invoked — an unused
+   plugin is pure always-on tax with zero return.
+5. Marketplaces are free to keep registered (metadata only), but prune orphaned ones
+   (`claude plugin marketplace remove <name>`) once their last plugin is uninstalled —
+   tidiness, not token savings.
