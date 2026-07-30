@@ -62,9 +62,10 @@
     "playwright@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "compound-engineering@compound-engineering-plugin": true,
-    "ecc@ecc": true,
-    "github@claude-plugins-official": true
+    "github@claude-plugins-official": true,
+    "semgrep@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {

@@ -4,11 +4,8 @@
     "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
   },
   "github": {
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-github"],
-    "env": {
-      "GITHUB_PERSONAL_ACCESS_TOKEN": { "fromEnv": "GITHUB_TOKEN" }
-    }
+    "url": "https://api.githubcopilot.com/mcp/",
+    "type": "http"
   },
   "raindrop": {
     "url": "https://api.raindrop.io/rest/v2/ai/mcp",

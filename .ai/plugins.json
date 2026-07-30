@@ -46,6 +46,13 @@
     ]
   },
   {
+    "label": "claude-md-management",
+    "description": "audits CLAUDE.md quality, captures session learnings back into it — on-theme for this repo since .ai/skills/core/*.md is this project's own CLAUDE.md source",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "claude-md-management@claude-plugins-official", "--scope", "user"] }
+    ]
+  },
+  {
     "label": "claude-plugins-official",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "marketplace", "add", "anthropics/claude-plugins-official"] }
@@ -81,28 +88,12 @@
     ]
   },
   {
-    "label": "compound-engineering",
-    "description": "Every.to's compound engineering skill pack (brainstorm/plan/work/simplify/review/compound loop) — https://every.to/guides/compound-engineering, https://github.com/everyinc/compound-engineering-plugin",
-    "installs": [
-      { "agent": "claude", "shell": "claude plugin marketplace add EveryInc/compound-engineering-plugin && claude plugin install compound-engineering@compound-engineering-plugin --scope user" },
-      { "agent": "codex", "shell": "codex plugin marketplace add EveryInc/compound-engineering-plugin && codex plugin add compound-engineering@compound-engineering-plugin" }
-    ]
-  },
-  {
     "label": "context7",
     "description": "docs MCP server — Claude gets the official marketplace plugin, Codex gets a direct mcp add, ctx7 setup covers Cursor/opencode/VS Code/30+ other clients",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "context7@claude-plugins-official", "--scope", "user"] },
       { "agent": "codex", "command": "codex", "args": ["mcp", "add", "context7", "--", "npx", "-y", "@upstash/context7-mcp"] },
       { "command": "npx", "args": ["ctx7", "setup"] }
-    ]
-  },
-  {
-    "label": "ecc",
-    "description": "Enterprise Claude Configuration — agents, skills, hooks, rules, MCP config across Claude Code, Cursor, OpenCode, Codex. Plugin install doesn't distribute rules/ — copy the language dirs you need to ~/.claude/rules/ecc/ afterward. See https://github.com/affaan-m/ECC",
-    "installs": [
-      { "agent": "claude", "shell": "claude plugin marketplace add https://github.com/affaan-m/ECC && claude plugin install ecc" },
-      { "command": "npm", "args": ["install", "-g", "ecc-universal"] }
     ]
   },
   {
@@ -118,7 +109,7 @@
   },
   {
     "label": "github-mcp-server",
-    "description": "official GitHub MCP server (github/github-mcp-server), remote-hosted at api.githubcopilot.com — first use needs OAuth or a GitHub PAT. This project's .ai/mcp-servers.json already registers a 'github' entry via the older community @modelcontextprotocol/server-github package for this repo; the two aren't the same server, worth reconciling if both end up active",
+    "description": "official GitHub MCP server (github/github-mcp-server), remote-hosted at api.githubcopilot.com — first use needs OAuth or a GitHub PAT. This is the machine-wide Claude plugin install; this project's own .ai/mcp-servers.json 'github' entry points at the same official remote server for whoever clones this repo",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "github@claude-plugins-official", "--scope", "user"] },
       { "agent": "codex", "shell": "codex mcp add github --url https://api.githubcopilot.com/mcp/ --bearer-token-env-var GITHUB_PAT_TOKEN" }
@@ -128,6 +119,13 @@
     "label": "higgsfield-ai/skills",
     "installs": [
       { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "higgsfield-ai/skills", "--plugin"] }
+    ]
+  },
+  {
+    "label": "hookify",
+    "description": "define Claude Code hooks from plain markdown rules instead of hand-writing shell/JS hook scripts",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "hookify@claude-plugins-official", "--scope", "user"] }
     ]
   },
   {
@@ -171,6 +169,13 @@
     "description": "pattern-based warnings on edits + LLM diff review on Stop + agentic commit reviewer (injection, XSS, SSRF, hardcoded secrets, 25+ vuln classes) — hooks-based, Claude Code only, no equivalent for other agents yet",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "security-guidance@claude-plugins-official", "--scope", "user"] }
+    ]
+  },
+  {
+    "label": "semgrep",
+    "description": "static-analysis security scanner — deterministic rule-based vuln detection, complements security-guidance's LLM-based diff review",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "semgrep@claude-plugins-official", "--scope", "user"] }
     ]
   },
   {
