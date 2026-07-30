@@ -1,5 +1,26 @@
 [
   {
+    "label": "academic-research-skills",
+    "description": "ARS — human-in-the-loop research/writing/peer-review pipeline for academic papers, https://github.com/Imbad0202/academic-research-skills. Codex uses the separate ars-codex sibling distribution",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add Imbad0202/academic-research-skills && claude plugin install academic-research-skills@academic-research-skills --scope user" },
+      { "agent": "codex", "shell": "codex plugin marketplace add Imbad0202/academic-research-skills-codex --ref main && codex plugin add ars-codex@ars-codex" }
+    ]
+  },
+  {
+    "label": "agent-skills",
+    "description": "Addy Osmani's 24 production-grade SDLC skills, spec through ship — https://github.com/addyosmani/agent-skills",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add addyosmani/agent-skills && claude plugin install agent-skills@addy-agent-skills --scope user" },
+      { "agent": "codex", "command": "npx", "args": ["skills", "add", "addyosmani/agent-skills", "-a", "codex"] }
+    ]
+  },
+  {
+    "label": "ast-grep",
+    "description": "structural code search/rewrite CLI — installs the ast-grep binary itself; any agent with shell access can call it directly, no MCP/plugin registration needed",
+    "installs": [{ "command": "npm", "args": ["install", "-g", "@ast-grep/cli"] }]
+  },
+  {
     "label": "build-web-apps",
     "installs": [
       { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "openai/plugins/plugins/build-web-apps", "--plugin"] }
@@ -60,9 +81,21 @@
     ]
   },
   {
+    "label": "compound-engineering",
+    "description": "Every.to's compound engineering skill pack (brainstorm/plan/work/simplify/review/compound loop) — https://every.to/guides/compound-engineering, https://github.com/everyinc/compound-engineering-plugin",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add EveryInc/compound-engineering-plugin && claude plugin install compound-engineering@compound-engineering-plugin --scope user" },
+      { "agent": "codex", "shell": "codex plugin marketplace add EveryInc/compound-engineering-plugin && codex plugin add compound-engineering@compound-engineering-plugin" }
+    ]
+  },
+  {
     "label": "context7",
-    "description": "docs MCP server setup",
-    "installs": [{ "command": "npx", "args": ["ctx7", "setup"] }]
+    "description": "docs MCP server — Claude gets the official marketplace plugin, Codex gets a direct mcp add, ctx7 setup covers Cursor/opencode/VS Code/30+ other clients",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "context7@claude-plugins-official", "--scope", "user"] },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "context7", "--", "npx", "-y", "@upstash/context7-mcp"] },
+      { "command": "npx", "args": ["ctx7", "setup"] }
+    ]
   },
   {
     "label": "ecc",
@@ -84,15 +117,46 @@
     ]
   },
   {
+    "label": "github-mcp-server",
+    "description": "official GitHub MCP server (github/github-mcp-server), remote-hosted at api.githubcopilot.com — first use needs OAuth or a GitHub PAT. This project's .ai/mcp-servers.json already registers a 'github' entry via the older community @modelcontextprotocol/server-github package for this repo; the two aren't the same server, worth reconciling if both end up active",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "github@claude-plugins-official", "--scope", "user"] },
+      { "agent": "codex", "shell": "codex mcp add github --url https://api.githubcopilot.com/mcp/ --bearer-token-env-var GITHUB_PAT_TOKEN" }
+    ]
+  },
+  {
     "label": "higgsfield-ai/skills",
     "installs": [
       { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "higgsfield-ai/skills", "--plugin"] }
     ]
   },
   {
+    "label": "hyperframes",
+    "description": "HeyGen HyperFrames — write HTML, render video (compositions, GSAP/runtime animations, captions, voiceovers, website-to-video) — https://hyperframes.heygen.com, https://github.com/heygen-com/hyperframes",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "hyperframes@claude-plugins-official", "--scope", "user"] }
+    ]
+  },
+  {
+    "label": "magnific",
+    "description": "official Magnific MCP — image/video generation and upscaling; OAuth sign-in, no API key; remote streamable-HTTP server at mcp.magnific.com — https://www.magnific.com/mcp",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "--transport", "http", "magnific", "https://mcp.magnific.com"] },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "magnific", "--url", "https://mcp.magnific.com"] }
+    ]
+  },
+  {
     "label": "obsidian",
     "installs": [
       { "agent": "claude", "shell": "claude plugin marketplace add kepano/obsidian-skills && claude plugin install obsidian@obsidian-skills --scope user" }
+    ]
+  },
+  {
+    "label": "playwright",
+    "description": "Microsoft's browser automation / E2E testing MCP server",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "playwright@claude-plugins-official", "--scope", "user"] },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "playwright", "--", "npx", "-y", "@playwright/mcp@latest"] }
     ]
   },
   {
@@ -103,9 +167,23 @@
     ]
   },
   {
+    "label": "security-guidance",
+    "description": "pattern-based warnings on edits + LLM diff review on Stop + agentic commit reviewer (injection, XSS, SSRF, hardcoded secrets, 25+ vuln classes) — hooks-based, Claude Code only, no equivalent for other agents yet",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "security-guidance@claude-plugins-official", "--scope", "user"] }
+    ]
+  },
+  {
     "label": "superpowers",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "superpowers@claude-plugins-official", "--scope", "user"] }
+    ]
+  },
+  {
+    "label": "typescript-lsp",
+    "description": "typescript-language-server code intelligence — Claude Code LSP plugin only; VS Code-based tools (Cursor, Windsurf, Copilot) already bundle a TS language service, no separate install needed there",
+    "installs": [
+      { "agent": "claude", "shell": "npm install -g typescript-language-server typescript && claude plugin install typescript-lsp@claude-plugins-official --scope user" }
     ]
   }
 ]
