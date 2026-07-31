@@ -88,6 +88,13 @@
     ]
   },
   {
+    "label": "composio",
+    "description": "one MCP endpoint proxying 20,000+ tools across 1000+ SaaS apps (GitHub, Slack, Notion, etc.), loaded just-in-time so the catalog doesn't blow context — https://composio.dev. No static public URL: needs a Composio account + API key, and the MCP session URL is generated per-user via their SDK first (see https://composio.dev/toolkits/composio/framework/claude-code). Export COMPOSIO_MCP_URL and COMPOSIO_API_KEY before running this. Codex CLI skipped — Composio auths via a custom X-API-Key header, not the bearer token codex's --url flow expects",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add --transport http composio \"$COMPOSIO_MCP_URL\" --headers \"X-API-Key:$COMPOSIO_API_KEY\"" }
+    ]
+  },
+  {
     "label": "context7",
     "description": "docs MCP server — Claude gets the official marketplace plugin, Codex gets a direct mcp add, ctx7 setup covers Cursor/opencode/VS Code/30+ other clients",
     "installs": [
