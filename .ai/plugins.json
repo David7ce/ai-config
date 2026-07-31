@@ -157,6 +157,13 @@
     ]
   },
   {
+    "label": "php-lsp",
+    "description": "Intelephense code intelligence for PHP — Claude Code LSP plugin only",
+    "installs": [
+      { "agent": "claude", "shell": "npm install -g intelephense && claude plugin install php-lsp@claude-plugins-official --scope user" }
+    ]
+  },
+  {
     "label": "playwright",
     "description": "Microsoft's browser automation / E2E testing MCP server",
     "installs": [
@@ -169,6 +176,13 @@
     "installs": [
       { "agent": "claude", "shell": "claude plugin marketplace add DietrichGebert/ponytail && claude plugin install ponytail@ponytail --scope user" },
       { "agent": "codex", "command": "codex", "args": ["plugin", "marketplace", "add", "DietrichGebert/ponytail", "codex"] }
+    ]
+  },
+  {
+    "label": "pyright-lsp",
+    "description": "Pyright code intelligence + type checking for Python — Claude Code LSP plugin only",
+    "installs": [
+      { "agent": "claude", "shell": "npm install -g pyright && claude plugin install pyright-lsp@claude-plugins-official --scope user" }
     ]
   },
   {
