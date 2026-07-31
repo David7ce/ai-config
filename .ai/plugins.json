@@ -186,20 +186,6 @@
     ]
   },
   {
-    "label": "security-guidance",
-    "description": "pattern-based warnings on edits + LLM diff review on Stop + agentic commit reviewer (injection, XSS, SSRF, hardcoded secrets, 25+ vuln classes) — hooks-based, Claude Code only, no equivalent for other agents yet",
-    "installs": [
-      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "security-guidance@claude-plugins-official", "--scope", "user"] }
-    ]
-  },
-  {
-    "label": "semgrep",
-    "description": "static-analysis security scanner — deterministic rule-based vuln detection, complements security-guidance's LLM-based diff review",
-    "installs": [
-      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "semgrep@claude-plugins-official", "--scope", "user"] }
-    ]
-  },
-  {
     "label": "superpowers",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "superpowers@claude-plugins-official", "--scope", "user"] }
