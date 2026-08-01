@@ -9,6 +9,7 @@
 /.claude/
 /.opencode/
 /.github/
+/.agents/
 /.vscode/
 
 node_modules/

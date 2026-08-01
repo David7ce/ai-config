@@ -12,7 +12,8 @@
 // (claude-settings.json, claude-hooks/) — settings.json's shape (effortLevel, hooks,
 // enabledPlugins, ...) is Claude Code's own, not portable, so the prefix is honest about
 // scope without needing a directory for it.
-// Only Claude Code is wired up today — its ~/.claude path and shape are verified.
+// Claude Code, GitHub Copilot CLI, and Gemini CLI are wired up today — their home paths
+// and shapes are verified. Antigravity CLI shares the Gemini home path in this repo.
 // Deliberately NOT tracked: plugins/ (9+ MB of cache + marketplace git clones) and ide/
 // (per-process .lock files, pure runtime state, not config) — plugins.json (see `plugins`
 // action below) reproduces both on demand instead, package-manager style, so there's
@@ -40,8 +41,12 @@ const { mirrorDir, pickFromMenu } = require('./lib');
 const DOTFILE_TARGETS = [
   { key: 'claude', label: 'Claude Code', dirName: '.claude', skills: true },
   { key: 'copilot', label: 'GitHub Copilot CLI', dirName: '.copilot', skills: true },
-  { key: 'gemini', label: 'Gemini CLI', dirName: '.gemini', skills: false },
+  { key: 'gemini', label: 'Gemini CLI / Antigravity CLI', dirName: '.gemini', skills: false },
 ];
+
+const TARGET_ALIASES = {
+  antigravity: 'gemini',
+};
 
 function parseArgs(argv) {
   const flags = new Set();
@@ -61,7 +66,8 @@ function resolveTargets(homeBase) {
 }
 
 async function pickTargets(flags, targets) {
-  const byFlag = targets.filter((t) => flags.has(t.key));
+  const normalizedFlags = new Set([...flags].map((flag) => TARGET_ALIASES[flag] || flag));
+  const byFlag = targets.filter((t) => normalizedFlags.has(t.key));
   if (byFlag.length) return byFlag;
   if (flags.has('all')) return targets;
   if (flags.size > 0) return []; // an unrecognized flag was passed — fail safe, don't guess
@@ -390,7 +396,7 @@ async function run(argv, defaultSourceDir) {
 
   if (!['import', 'list', 'remove', 'plugins', 'tree', undefined].includes(action)) {
     console.log(
-      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--all] [name] [--source <dir>] [--home <dir>]'
+      'usage: ai-config dotfiles <import|list|remove|plugins|tree> [--claude|--copilot|--gemini|--antigravity|--all] [name] [--source <dir>] [--home <dir>]'
     );
     return;
   }
@@ -404,7 +410,7 @@ async function run(argv, defaultSourceDir) {
   }
 
   if (action === 'remove' && !name) {
-    throw new Error('usage: ai-config dotfiles remove <skill-name> [--claude|--all]');
+    throw new Error('usage: ai-config dotfiles remove <skill-name> [--claude|--copilot|--gemini|--antigravity|--all]');
   }
 
   for (const target of selected) {

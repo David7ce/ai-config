@@ -3,7 +3,7 @@
 // No arrow-key TUI dependency: a plain numbered menu via readline covers "menu" at zero deps
 // and is more reliably cross-platform (Windows terminals + raw mode are a real footgun).
 // Pass flags to skip the menu (scriptable/CI use): --claude --codex --opencode --gemini
-// --cursor --windsurf --copilot --mcp --all --target <dir> --source <dir>
+// --antigravity --cursor --windsurf --copilot --mcp --all --target <dir> --source <dir>
 const fs = require('fs');
 const path = require('path');
 const { write, pickFromMenu } = require('./lib');
@@ -50,6 +50,12 @@ const TARGETS = [
     generate: (src, targetDir) => [write(targetDir, 'GEMINI.md', genGemini())],
   },
   {
+    key: 'antigravity',
+    label: 'Antigravity CLI',
+    file: '.agents/AGENTS.md',
+    generate: (src, targetDir) => [write(targetDir, '.agents/AGENTS.md', genAntigravity(src))],
+  },
+  {
     key: 'cursor',
     label: 'Cursor',
     file: '.cursor/rules/project.mdc',
@@ -63,7 +69,7 @@ const TARGETS = [
   },
   {
     key: 'copilot',
-    label: 'GitHub Copilot',
+    label: 'GitHub Copilot CLI',
     file: '.github/copilot-instructions.md',
     generate: (src, targetDir, sourceDir) => [
       write(targetDir, '.github/copilot-instructions.md', genCopilot(src)),
@@ -188,13 +194,15 @@ const genGemini = () =>
   'Source of truth: `.ai/` directory.\n\n' +
   'Read `AGENTS.md` for the full instruction set, skill references, and prompt definitions.\n';
 
+const genAntigravity = (src) => `# Antigravity Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+
 const genWindsurf = (src) => `# Windsurf Project Rules\n\n${renderRefList(src, { headers: false })}`;
 
 const genCursor = (src) =>
   `---\ndescription: Project-wide AI rules for this workspace\nalwaysApply: true\n---\n\n` +
   `# Project Rules\n\n${renderRefList(src, { headers: false })}`;
 
-const genCopilot = (src) => `# GitHub Copilot Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+const genCopilot = (src) => `# GitHub Copilot CLI Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
 
 // ---- MCP ----
 
