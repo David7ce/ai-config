@@ -9,6 +9,7 @@ const path = require('path');
 const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');
 const { validateConfig } = require('../core/config-validator');
+const { AdapterRegistry } = require('../core/adapter-registry');
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -60,6 +61,12 @@ async function main() {
   const sourceDir = path.join(tmp, '.ai');
   const targetDir = path.join(tmp, 'target');
   buildFixture(sourceDir);
+
+  const registry = new AdapterRegistry();
+  registry.register({ key: 'demo', generate() {} });
+  assert.deepStrictEqual(registry.keys(), ['demo'], 'adapter registry lists registered adapters');
+  assert.throws(() => registry.register({ key: 'demo', generate() {} }), /already registered/, 'adapter registry rejects duplicate keys');
+  assert.throws(() => registry.register({ key: 'invalid' }), /must define generate/, 'adapter registry requires a generate function');
 
   const validFixture = validateConfig(sourceDir);
   assert.ok(validFixture.valid, `fixture should validate: ${JSON.stringify(validFixture.diagnostics)}`);

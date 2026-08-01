@@ -9,6 +9,7 @@ const path = require('path');
 const { write, pickFromMenu } = require('./lib');
 const { loadConfig, parseFrontmatter } = require('../core/config-loader');
 const { hasErrors } = require('../core/diagnostics');
+const { AdapterRegistry } = require('../core/adapter-registry');
 
 // Each entry is everything there is to know about one target: label + path for the menu,
 // generate() for `run()`. Adding a tool means adding one entry here — nowhere else.
@@ -90,6 +91,8 @@ const TARGETS = [
   },
 ];
 
+const adapters = new AdapterRegistry(TARGETS);
+
 function parseArgs(argv) {
   const flags = new Set();
   const opts = {};
@@ -103,7 +106,7 @@ function parseArgs(argv) {
 
 const askMenu = () =>
   pickFromMenu(
-    TARGETS.map((t) => ({ key: t.key, label: t.label, extra: t.file })),
+    adapters.list().map((t) => ({ key: t.key, label: t.label, extra: t.file })),
     'AI Config — select which agents to set up (.ai/ is the source of truth)'
   );
 
@@ -353,9 +356,9 @@ async function run(argv) {
 
   let selected = new Set();
   if (flags.has('all')) {
-    selected = new Set(TARGETS.map((t) => t.key));
+    selected = new Set(adapters.keys());
   } else {
-    for (const t of TARGETS) if (flags.has(t.key)) selected.add(t.key);
+    for (const t of adapters.list()) if (flags.has(t.key)) selected.add(t.key);
   }
 
   if (selected.size === 0 && flags.size === 0) {
@@ -379,7 +382,7 @@ async function run(argv) {
   }
   const src = toSourceView(loaded.config);
   const written = [];
-  for (const target of TARGETS) {
+  for (const target of adapters.list()) {
     if (selected.has(target.key)) written.push(...target.generate(src, targetDir, sourceDir, loaded.config));
   }
   // codex and opencode both write AGENTS.md (it's a real shared standard, not a mistake) —
