@@ -3,10 +3,12 @@
 // No arrow-key TUI dependency: a plain numbered menu via readline covers "menu" at zero deps
 // and is more reliably cross-platform (Windows terminals + raw mode are a real footgun).
 // Pass flags to skip the menu (scriptable/CI use): --claude --codex --opencode --gemini
-// --cursor --windsurf --copilot --mcp --all --target <dir> --source <dir>
+// --antigravity --cursor --windsurf --copilot --mcp --all --target <dir> --source <dir>
 const fs = require('fs');
 const path = require('path');
 const { write, pickFromMenu } = require('./lib');
+const { loadConfig, parseFrontmatter } = require('../core/config-loader');
+const { hasErrors } = require('../core/diagnostics');
 
 // Each entry is everything there is to know about one target: label + path for the menu,
 // generate() for `run()`. Adding a tool means adding one entry here — nowhere else.
@@ -16,10 +18,10 @@ const TARGETS = [
     key: 'claude',
     label: 'Claude Code',
     file: 'CLAUDE.md',
-    generate: (src, targetDir, sourceDir) => [
+    generate: (src, targetDir, sourceDir, sourceConfig) => [
       write(targetDir, 'CLAUDE.md', genClaude(src)),
-      ...writeFresh(targetDir, '.claude/agents', readAgents(sourceDir).map((a) => [`${a.name}.md`, genClaudeAgent(a)])),
-      ...writeFresh(targetDir, '.claude/commands', readPrompts(sourceDir).map((p) => [`${p.name}.md`, genPromptFile(p)])),
+      ...writeFresh(targetDir, '.claude/agents', sourceConfig.agents.map((a) => [`${a.id}.md`, genClaudeAgent({ name: a.id, meta: a.metadata })])),
+      ...writeFresh(targetDir, '.claude/commands', sourceConfig.prompts.map((p) => [`${p.id}.md`, genPromptFile({ name: p.id, meta: p.metadata })])),
       ...materializeClaudeSkills(sourceDir, targetDir, src),
     ],
   },
@@ -33,13 +35,13 @@ const TARGETS = [
     key: 'opencode',
     label: 'opencode',
     file: 'AGENTS.md + .opencode/agents, .opencode/commands',
-    generate: (src, targetDir, sourceDir) => [
+    generate: (src, targetDir, sourceDir, sourceConfig) => [
       write(targetDir, 'AGENTS.md', genAgentsMd(src)),
-      ...writeFresh(targetDir, '.opencode/agents', readAgents(sourceDir).map((a) => [`${a.name}.md`, genOpencodeAgent(a)])),
+      ...writeFresh(targetDir, '.opencode/agents', sourceConfig.agents.map((a) => [`${a.id}.md`, genOpencodeAgent({ name: a.id, meta: a.metadata })])),
       ...writeFresh(
         targetDir,
         '.opencode/commands',
-        readPrompts(sourceDir).map((p) => [`${p.name}.md`, genPromptFile(p, { agentBinding: true })])
+        sourceConfig.prompts.map((p) => [`${p.id}.md`, genPromptFile({ name: p.id, meta: p.metadata }, { agentBinding: true })])
       ),
     ],
   },
@@ -48,6 +50,12 @@ const TARGETS = [
     label: 'Gemini CLI',
     file: 'GEMINI.md',
     generate: (src, targetDir) => [write(targetDir, 'GEMINI.md', genGemini())],
+  },
+  {
+    key: 'antigravity',
+    label: 'Antigravity CLI',
+    file: '.agents/AGENTS.md',
+    generate: (src, targetDir) => [write(targetDir, '.agents/AGENTS.md', genAntigravity(src))],
   },
   {
     key: 'cursor',
@@ -63,13 +71,13 @@ const TARGETS = [
   },
   {
     key: 'copilot',
-    label: 'GitHub Copilot',
+    label: 'GitHub Copilot CLI',
     file: '.github/copilot-instructions.md',
-    generate: (src, targetDir, sourceDir) => [
+    generate: (src, targetDir, sourceDir, sourceConfig) => [
       write(targetDir, '.github/copilot-instructions.md', genCopilot(src)),
-      ...writeFresh(targetDir, '.github/agents', readAgents(sourceDir).map((a) => [`${a.name}.agent.md`, genGithubAgent(a)])),
+      ...writeFresh(targetDir, '.github/agents', sourceConfig.agents.map((a) => [`${a.id}.agent.md`, genGithubAgent({ name: a.id, meta: a.metadata })])),
       ...writeFresh(targetDir, '.github/prompts', [
-        ...readPrompts(sourceDir).map((p) => [`${p.name}.prompt.md`, genPromptFile(p, { command: true })]),
+        ...sourceConfig.prompts.map((p) => [`${p.id}.prompt.md`, genPromptFile({ name: p.id, meta: p.metadata }, { command: true })]),
         ...copilotBespokePrompts(sourceDir),
       ]),
     ],
@@ -78,7 +86,7 @@ const TARGETS = [
     key: 'mcp',
     label: 'MCP servers',
     file: '.mcp.json + .vscode/mcp.json',
-    generate: (src, targetDir, sourceDir) => genMcp(targetDir, sourceDir),
+    generate: (src, targetDir, sourceDir, sourceConfig) => genMcp(targetDir, sourceConfig),
   },
 ];
 
@@ -110,21 +118,15 @@ function listMd(dir) {
 // excluded everywhere else prompts/ gets listed.
 const isBespokePrompt = (f) => f.endsWith('.prompt.md');
 
-function readSource(sourceDir) {
-  const hasInstructions = fs.existsSync(path.join(sourceDir, 'instructions.md'));
-  const coreSkills = listMd(path.join(sourceDir, 'skills/core')).map((f) => `skills/core/${f}`);
-  const projectsDir = path.join(sourceDir, 'skills/projects');
-  const projectSkills = fs.existsSync(projectsDir)
-    ? fs
-        .readdirSync(projectsDir)
-        .filter((d) => fs.statSync(path.join(projectsDir, d)).isDirectory())
-        .flatMap((d) => listMd(path.join(projectsDir, d)).map((f) => `skills/projects/${d}/${f}`))
-    : [];
-  const prompts = listMd(path.join(sourceDir, 'prompts'))
-    .filter((f) => !isBespokePrompt(f))
-    .map((f) => `prompts/${f}`);
-  const agentDefs = listMd(path.join(sourceDir, 'agents')).map((f) => `agents/${f}`);
-  return { hasInstructions, coreSkills, projectSkills, prompts, agentDefs };
+function toSourceView(config) {
+  const portable = (source) => source.replace(/\\/g, '/');
+  return {
+    hasInstructions: config.instructions.length > 0,
+    coreSkills: config.skills.core.map((skill) => portable(skill.source)),
+    projectSkills: config.skills.projects.map((skill) => portable(skill.source)),
+    prompts: config.prompts.map((prompt) => portable(prompt.source)),
+    agentDefs: config.agents.map((agent) => portable(agent.source)),
+  };
 }
 
 function scaffoldSource(sourceDir) {
@@ -188,20 +190,20 @@ const genGemini = () =>
   'Source of truth: `.ai/` directory.\n\n' +
   'Read `AGENTS.md` for the full instruction set, skill references, and prompt definitions.\n';
 
+const genAntigravity = (src) => `# Antigravity Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+
 const genWindsurf = (src) => `# Windsurf Project Rules\n\n${renderRefList(src, { headers: false })}`;
 
 const genCursor = (src) =>
   `---\ndescription: Project-wide AI rules for this workspace\nalwaysApply: true\n---\n\n` +
   `# Project Rules\n\n${renderRefList(src, { headers: false })}`;
 
-const genCopilot = (src) => `# GitHub Copilot Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+const genCopilot = (src) => `# GitHub Copilot CLI Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
 
 // ---- MCP ----
 
-function genMcp(targetDir, sourceDir) {
-  const mcpFile = path.join(sourceDir, 'mcp-servers.json');
-  if (!fs.existsSync(mcpFile)) fs.writeFileSync(mcpFile, '{}\n');
-  const source = JSON.parse(fs.readFileSync(mcpFile, 'utf8'));
+function genMcp(targetDir, sourceConfig) {
+  const source = sourceConfig.mcpServers;
 
   const resolveEnv = (envObj, toPlaceholder) => {
     if (!envObj) return undefined;
@@ -248,39 +250,6 @@ function genMcp(targetDir, sourceDir) {
 // tool (Claude's `tools: [Read, Edit, ...]` vs Copilot's `tools: [vscode/getProjectSetupInfo,
 // ...]`). Prompts need less: per-tool frontmatter (opencode's `agent:` binding, Copilot's
 // `command:`) is generated from one flat frontmatter block already on the source .md. ----
-
-function readFrontmatter(raw) {
-  const meta = {};
-  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-  if (!m) return meta;
-  for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^([\w-]+):\s*(.*)$/);
-    if (kv) meta[kv[1]] = kv[2].trim().replace(/^"(.*)"$/, '$1');
-  }
-  return meta;
-}
-
-function readJson(file, fallback) {
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback;
-}
-
-function readAgents(sourceDir) {
-  const dir = path.join(sourceDir, 'agents');
-  return listMd(dir).map((f) => {
-    const name = f.replace(/\.md$/, '');
-    return { name, meta: readJson(path.join(dir, `${name}.json`), {}) };
-  });
-}
-
-function readPrompts(sourceDir) {
-  const dir = path.join(sourceDir, 'prompts');
-  return listMd(dir)
-    .filter((f) => !isBespokePrompt(f))
-    .map((f) => {
-      const name = f.replace(/\.md$/, '');
-      return { name, meta: readFrontmatter(fs.readFileSync(path.join(dir, f), 'utf8')) };
-    });
-}
 
 // Wipes the target dir first — stale extras deleted, not left behind, same rule every
 // other generator here follows (mirrorDir's mirroring, materializeClaudeSkills's rmSync).
@@ -369,7 +338,7 @@ function materializeClaudeSkills(sourceDir, targetDir, src) {
     // between e.g. two projects both having a "testing.md" skill
     const name = stem === project || stem.startsWith(`${project}-`) ? stem : `${project}-${stem}`;
     const raw = fs.readFileSync(path.join(sourceDir, rel), 'utf8');
-    const desc = readFrontmatter(raw).description || stem;
+    const desc = parseFrontmatter(raw, path.join(sourceDir, rel), []).metadata.description || stem;
     // source files may carry CRLF (Windows checkout) — match \r?\n, not just \n
     const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, `---\nname: ${name}\ndescription: ${desc}\n---\n`);
     return [`${name}/SKILL.md`, body];
@@ -401,10 +370,17 @@ async function run(argv) {
     console.log(`\n✓ scaffolded ${path.relative(targetDir, sourceDir) || '.ai'}/ — empty, fill it in and re-run`);
   }
 
-  const src = readSource(sourceDir);
+  const loaded = loadConfig(sourceDir);
+  if (hasErrors(loaded.diagnostics)) {
+    for (const item of loaded.diagnostics) {
+      console.error(`${item.code}: ${item.message}${item.file ? ` (${item.file})` : ''}`);
+    }
+    throw new Error('Cannot generate from an invalid AI Config. Run `ai-config validate` for details.');
+  }
+  const src = toSourceView(loaded.config);
   const written = [];
   for (const target of TARGETS) {
-    if (selected.has(target.key)) written.push(...target.generate(src, targetDir, sourceDir));
+    if (selected.has(target.key)) written.push(...target.generate(src, targetDir, sourceDir, loaded.config));
   }
   // codex and opencode both write AGENTS.md (it's a real shared standard, not a mistake) —
   // dedupe so a combined run doesn't list the same path twice

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-config.dev/schema/config-v1.json",
+  "title": "AI Config source directory",
+  "description": "Version 1 is a directory-based format. This schema documents the canonical JSON concepts; Markdown resources are referenced by relative paths.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "version": { "const": 1 },
+    "mcpServers": { "type": "object" },
+    "installations": { "type": "array" },
+    "targetSettings": { "type": "object" },
+    "manifests": { "type": "object" }
+  },
+  "additionalProperties": true
+}

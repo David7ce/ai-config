@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');
+const { validateConfig } = require('../core/config-validator');
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -59,6 +60,21 @@ async function main() {
   const sourceDir = path.join(tmp, '.ai');
   const targetDir = path.join(tmp, 'target');
   buildFixture(sourceDir);
+
+  const validFixture = validateConfig(sourceDir);
+  assert.ok(validFixture.valid, `fixture should validate: ${JSON.stringify(validFixture.diagnostics)}`);
+
+  fs.writeFileSync(path.join(sourceDir, 'mcp-servers.json'), '{ invalid json');
+  const invalidFixture = validateConfig(sourceDir);
+  assert.ok(!invalidFixture.valid, 'invalid JSON should fail configuration validation');
+  assert.ok(invalidFixture.diagnostics.some((item) => item.code === 'INVALID_JSON'), 'invalid JSON reports a diagnostic code');
+  fs.writeFileSync(
+    path.join(sourceDir, 'mcp-servers.json'),
+    JSON.stringify({
+      demo: { command: 'npx', args: ['-y', 'demo-server'], env: { TOKEN: { fromEnv: 'DEMO_TOKEN' } } },
+      remote: { url: 'https://example.com/mcp', type: 'http' },
+    })
+  );
 
   // pre-seed stale files where wrap's Claude mirrors will write, to prove the mirrors
   // actually delete destination extras instead of just adding on top
@@ -128,6 +144,9 @@ async function main() {
   const ghBespoke = fs.readFileSync(path.join(targetDir, '.github/prompts/demo.prompt.md'), 'utf8');
   assert.match(ghBespoke, /Bespoke Copilot template/, '.github/prompts/ still copies the one hand-authored template verbatim');
 
+  const antigravity = fs.readFileSync(path.join(targetDir, '.agents/AGENTS.md'), 'utf8');
+  assert.match(antigravity, /# Antigravity Workspace Instructions/, '.agents/AGENTS.md generated for Antigravity CLI');
+
   const gemini = fs.readFileSync(path.join(targetDir, 'GEMINI.md'), 'utf8');
   assert.match(gemini, /Read `AGENTS\.md`/, 'GEMINI.md points at AGENTS.md');
 
@@ -148,8 +167,10 @@ async function main() {
   // scaffold: pointing at a source that doesn't exist yet should create an empty skeleton, not throw
   const scaffoldTarget = path.join(tmp, 'scaffold-target');
   await wrap.run(['--claude', '--target', scaffoldTarget]);
+  await wrap.run(['--antigravity', '--target', scaffoldTarget]);
   assert.ok(fs.existsSync(path.join(scaffoldTarget, '.ai', 'instructions.md')), 'scaffolds .ai/instructions.md');
   assert.ok(fs.existsSync(path.join(scaffoldTarget, 'CLAUDE.md')), 'still writes CLAUDE.md after scaffolding');
+  assert.ok(fs.existsSync(path.join(scaffoldTarget, '.agents', 'AGENTS.md')), 'writes Antigravity AGENTS.md after scaffolding');
 
   // dotfiles list touches the real ~/.claude (read-only) — just confirm it doesn't throw.
   // --all bypasses the interactive menu, which would otherwise block on stdin here.
@@ -168,7 +189,7 @@ async function main() {
     const origLog = console.log;
     console.log = (...a) => logs.push(a.join(' '));
     await dotfiles.run(['list', '--copilot', '--home', targetsHome], sourceDir);
-    await dotfiles.run(['list', '--gemini', '--home', targetsHome], sourceDir);
+    await dotfiles.run(['list', '--antigravity', '--home', targetsHome], sourceDir);
     console.log = origLog;
     const output = logs.join('\n');
     assert.match(
@@ -178,8 +199,8 @@ async function main() {
     );
     assert.match(
       output,
-      new RegExp(`Gemini CLI: \\.ai/ \\(source of truth\\) vs ${path.join(targetsHome, '.gemini').replace(/[\\.]/g, '\\$&')}`),
-      'DOTFILE_TARGETS: gemini resolves to label "Gemini CLI" and homeDir <home>/.gemini'
+      new RegExp(`Gemini CLI / Antigravity CLI: \\.ai/ \\(source of truth\\) vs ${path.join(targetsHome, '.gemini').replace(/[\\.]/g, '\\$&')}`),
+      'DOTFILE_TARGETS: antigravity alias resolves to Gemini homeDir and shared label'
     );
   }
 
