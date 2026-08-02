@@ -293,6 +293,8 @@ async function main() {
   fs.writeFileSync(path.join(sourceDir, 'skills/personal/demo-skill/SKILL.md'), '# demo\n');
   fs.writeFileSync(path.join(sourceDir, 'claude-hooks/demo-hook'), '#!/bin/bash\necho hi\n');
   fs.writeFileSync(path.join(sourceDir, 'claude-settings.json'), '{"model":"test"}\n');
+  fs.writeFileSync(path.join(sourceDir, 'codex-settings.toml'), 'model = "gpt-5.5"\n\n[mcp_servers.demo]\ncommand = "npx"\n');
+  fs.writeFileSync(path.join(sourceDir, 'claude-user-mcp.json'), JSON.stringify({ demo: { command: 'npx', args: ['-y', 'demo-server'] } }));
 
   const claudeTarget = { key: 'claude', label: 'Claude Code', homeDir: path.join(tmp, 'fake-home', '.claude') };
   assert.strictEqual(dotfiles.readImportManifest(sourceDir, claudeTarget), null, 'readImportManifest: null when .ai/claude-import.txt does not exist');
@@ -320,6 +322,11 @@ async function main() {
   fs.writeFileSync(path.join(fakeHome, '.claude/skills/stale-skill/SKILL.md'), 'should be gone after import\n');
 
   await dotfiles.run(['import', '--claude', '--home', fakeHome], sourceDir);
+  await dotfiles.run(['import', '--codex', '--home', fakeHome], sourceDir);
+  assert.ok(fs.existsSync(path.join(fakeHome, '.codex/config.toml')), 'Codex import writes config.toml');
+  assert.match(fs.readFileSync(path.join(fakeHome, '.codex/config.toml'), 'utf8'), /mcp_servers\.demo/, 'Codex import preserves MCP declarations');
+  await dotfiles.run(['import', '--claude', '--home', fakeHome], sourceDir);
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(fakeHome, '.claude.json'), 'utf8')).mcpServers.demo.command, 'npx', 'Claude user MCP import writes mcpServers');
   assert.ok(
     fs.existsSync(path.join(fakeHome, '.claude/skills/demo-skill/SKILL.md')),
     '--home import writes the skill into the scratch home, not the real one'

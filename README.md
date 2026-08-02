@@ -33,6 +33,9 @@ delete MCP configuration: Claude's `.mcp.json`/`~/.claude.json` or Codex's `conf
 `mcp_servers` entries are preserved. Claude's MCP authentication cache may be removed and may
 require signing in again. Codex supports MCP through `codex mcp` and
 `[mcp_servers.<name>]` in `~/.codex/config.toml`; Codex plugins can also bundle MCP servers.
+For Claude user-scoped MCP, optionally maintain `.ai/claude-user-mcp.json`; importing it updates
+only the `mcpServers` field in `~/.claude.json` and preserves the rest of Claude's project and
+approval state.
 
 ## Building blocks
 
@@ -41,9 +44,11 @@ generic source of truth; the CLI materializes it into each tool's native shape.
 
 MCP servers in `.ai/mcp-servers.json` are generated for Claude/VS Code and Codex. Codex uses
 project-scoped `.codex/config.toml` entries under `[mcp_servers.<name>]`; use `--codex` when
-generating a workspace. Codex supports MCP through `codex mcp` and also supports plugins that
-bundle MCP servers. Plugin installation remains an explicit machine-level operation via
-`dotfiles plugins`; plugin caches and installed marketplace content are handled by `clean`.
+generating a workspace. For user-level Codex settings, edit `.ai/codex-settings.toml` and run
+`node cli/index.js dotfiles import --codex`; this preserves Codex MCP and plugin declarations.
+Codex supports MCP through `codex mcp` and plugins that bundle MCP servers. Plugin installation
+remains an explicit machine-level operation via `dotfiles plugins`; caches and marketplace
+content are handled by `clean`.
 
 | Concept          | Source of truth                                                                                                                                            | Materialized as                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

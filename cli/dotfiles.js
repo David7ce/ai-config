@@ -42,6 +42,7 @@ const DOTFILE_TARGETS = [
   { key: 'claude', label: 'Claude Code', dirName: '.claude', skills: true },
   { key: 'copilot', label: 'GitHub Copilot CLI', dirName: '.copilot', skills: true },
   { key: 'antigravity', label: 'Antigravity CLI', dirName: '.gemini', skills: false },
+  { key: 'codex', label: 'Codex', dirName: '.codex', skills: false, config: 'toml' },
 ];
 
 const TARGET_ALIASES = {
@@ -81,7 +82,7 @@ async function pickTargets(flags, targets) {
 // Genuinely per-tool schema (Claude Code's own settings.json shape) — a <key>-prefixed
 // flat file, not a subfolder (see header comment).
 function settingsFile(sourceDir, target) {
-  return path.join(sourceDir, `${target.key}-settings.json`);
+  return path.join(sourceDir, `${target.key}-settings.${target.config || 'json'}`);
 }
 
 function sourceHooksDir(sourceDir, target) {
@@ -99,6 +100,10 @@ function personalSkillsDir(sourceDir) {
 // home here as a `claude plugin install ...` one).
 function personalPluginsFile(sourceDir) {
   return path.join(sourceDir, 'plugins.json');
+}
+
+function userMcpFile(sourceDir, target) {
+  return path.join(sourceDir, `${target.key}-user-mcp.json`);
 }
 
 // Pulls the installed plugin@marketplace id out of an install step, whether it's a plain
@@ -223,7 +228,8 @@ function importOne(sourceDir, target, manifest = null) {
   const skillsSrc = personalSkillsDir(sourceDir);
   const hooksSrc = sourceHooksDir(sourceDir, target);
   const settingsSrc = settingsFile(sourceDir, target);
-  if (![skillsSrc, hooksSrc, settingsSrc].some(fs.existsSync)) {
+  const userMcpSrc = userMcpFile(sourceDir, target);
+  if (![skillsSrc, hooksSrc, settingsSrc, userMcpSrc].some(fs.existsSync)) {
     throw new Error(`nothing to import for ${target.label} — none of ${skillsSrc}, ${hooksSrc}, ${settingsSrc} exist`);
   }
 
@@ -234,13 +240,15 @@ function importOne(sourceDir, target, manifest = null) {
   warnUnmatched(target, 'skills', skillsSelection, listDirNames(skillsSrc));
   warnUnmatched(target, 'hooks', hooksSelection, listFileNames(hooksSrc));
 
-  const liveSkillsDir = path.join(target.homeDir, 'skills');
-  console.log(`\n${target.label}: ${skillsSrc} -> ${liveSkillsDir}`);
-  if (skillsSelection === null) {
-    mirrorDir(skillsSrc, liveSkillsDir);
-  } else {
-    for (const name of listDirNames(skillsSrc)) {
-      if (skillsSelection.has(`skills:${name}`)) fs.cpSync(path.join(skillsSrc, name), path.join(liveSkillsDir, name), { recursive: true });
+  if (target.skills !== false) {
+    const liveSkillsDir = path.join(target.homeDir, 'skills');
+    console.log(`\n${target.label}: ${skillsSrc} -> ${liveSkillsDir}`);
+    if (skillsSelection === null) {
+      mirrorDir(skillsSrc, liveSkillsDir);
+    } else {
+      for (const name of listDirNames(skillsSrc)) {
+        if (skillsSelection.has(`skills:${name}`)) fs.cpSync(path.join(skillsSrc, name), path.join(liveSkillsDir, name), { recursive: true });
+      }
     }
   }
 
@@ -268,9 +276,14 @@ function importOne(sourceDir, target, manifest = null) {
     for (const f of copiedHooks) fs.chmodSync(path.join(liveHooksDir, f), 0o755);
   }
 
-  console.log(`${target.label}: settings.json -> ${target.homeDir}`);
+  console.log(`${target.label}: settings -> ${target.homeDir}`);
   fs.mkdirSync(target.homeDir, { recursive: true });
   if (fs.existsSync(settingsSrc)) {
+    if (target.config === 'toml') {
+      fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'config.toml'));
+      console.log(`${target.label}: config.toml copied; MCP and plugin declarations preserved`);
+      return;
+    }
     if (settingsSelection === null) {
       fs.copyFileSync(settingsSrc, path.join(target.homeDir, 'settings.json'));
     } else {
@@ -286,6 +299,15 @@ function importOne(sourceDir, target, manifest = null) {
   }
 
   repairAbsolutePaths(target);
+  if (fs.existsSync(userMcpSrc)) {
+    const liveUserConfig = target.key === 'claude' ? path.join(path.dirname(target.homeDir), '.claude.json') : null;
+    if (liveUserConfig) {
+      const current = fs.existsSync(liveUserConfig) ? JSON.parse(fs.readFileSync(liveUserConfig, 'utf8')) : {};
+      const userMcp = JSON.parse(fs.readFileSync(userMcpSrc, 'utf8'));
+      fs.writeFileSync(liveUserConfig, JSON.stringify({ ...current, mcpServers: userMcp }, null, 2) + '\n');
+      console.log(`${target.label}: user MCP -> ${liveUserConfig}`);
+    }
+  }
   console.log(`done. Skills active now. Run \`dotfiles plugins\` to install plugins/tools from plugins.json.`);
 }
 
