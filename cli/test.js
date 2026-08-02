@@ -458,7 +458,10 @@ async function main() {
         label: 'shell-demo',
         // a single agent needing two chained CLI calls (marketplace add, then install) is
         // still one step, not two — {shell} instead of a second {command, args} entry
-        installs: [{ agent: 'claude', shell: 'claude plugin marketplace add foo/bar && claude plugin install shell-demo@bar --scope user' }],
+        // Keep the shell form for parser/drift coverage, but make execution offline and
+        // side-effect free: the echoed text still contains the Claude install signature
+        // consumed by claudeInstallId().
+        installs: [{ agent: 'claude', shell: `"${process.execPath}" --version && echo "claude plugin install shell-demo@bar --scope user"` }],
       },
     ])
   );
