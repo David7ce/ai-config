@@ -1,8 +1,9 @@
 'use strict';
 
-// Built-in target declarations. Rendering behavior remains in wrap.js for now; keeping
-// target metadata and orchestration separate is the first extraction step toward external
-// adapters without changing generated output.
+const { createClaudeAdapter } = require('../adapters/claude');
+
+// Built-in target declarations. Adapters own target-specific behavior; this module keeps
+// the remaining built-ins together temporarily while extraction proceeds incrementally.
 function createTargetDefinitions(renderers) {
   const {
     genClaude,
@@ -24,16 +25,7 @@ function createTargetDefinitions(renderers) {
   } = renderers;
 
   return [
-    {
-      key: 'claude', label: 'Claude Code', file: 'CLAUDE.md',
-      capabilities: { instructions: true, skills: true, agents: true, prompts: true, mcp: true },
-      generate: (src, targetDir, sourceDir, sourceConfig) => [
-        write(targetDir, 'CLAUDE.md', genClaude(src)),
-        ...writeFresh(targetDir, '.claude/agents', sourceConfig.agents.map((a) => [`${a.id}.md`, genClaudeAgent({ name: a.id, meta: a.metadata })])),
-        ...writeFresh(targetDir, '.claude/commands', sourceConfig.prompts.map((p) => [`${p.id}.md`, genPromptFile({ name: p.id, meta: p.metadata })])),
-        ...materializeClaudeSkills(sourceDir, targetDir, src),
-      ],
-    },
+    createClaudeAdapter({ renderers }),
     {
       key: 'codex', label: 'Codex', file: 'AGENTS.md',
       capabilities: { instructions: true },

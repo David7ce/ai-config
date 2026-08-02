@@ -11,6 +11,7 @@ const dotfiles = require('./dotfiles');
 const { validateConfig } = require('../core/config-validator');
 const { AdapterRegistry } = require('../core/adapter-registry');
 const { createTargetDefinitions } = require('./target-definitions');
+const { createClaudeAdapter } = require('../adapters/claude');
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -78,6 +79,19 @@ async function main() {
   assert.ok(targetRegistry.has('claude'), 'built-in target definitions include Claude');
   assert.ok(targetRegistry.get('claude').capabilities.skills, 'built-in Claude adapter declares skills capability');
   assert.ok(targetRegistry.get('mcp').capabilities.mcp, 'MCP target declares MCP capability');
+
+  const claudeAdapter = createClaudeAdapter({
+    renderers: {
+      genClaude() { return ''; },
+      genClaudeAgent() { return ''; },
+      genPromptFile() { return ''; },
+      materializeClaudeSkills() { return []; },
+      write() { return 'CLAUDE.md'; },
+      writeFresh() { return []; },
+    },
+  });
+  assert.strictEqual(claudeAdapter.key, 'claude', 'Claude adapter has the expected stable key');
+  assert.strictEqual(claudeAdapter.file, 'CLAUDE.md', 'Claude adapter declares its primary output');
 
   const validFixture = validateConfig(sourceDir);
   assert.ok(validFixture.valid, `fixture should validate: ${JSON.stringify(validFixture.diagnostics)}`);
