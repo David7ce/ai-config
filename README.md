@@ -5,7 +5,7 @@ shape (Claude Code, Codex, opencode, Antigravity CLI, Cursor, Windsurf,
 GitHub Copilot CLI, MCP). Clone
 anywhere, run the CLI, get every agent reading the same rules in its native format.
 
-Everything at repo root except `.ai/`, `.agents/`, `cli/`, `wiki/`, `package.json` is **generated and
+Everything at repo root except `.ai/`, `cli/`, `wiki/`, `package.json` is **generated and
 gitignored** — never hand-edit it. See the comments in [cli/wrap.js](cli/wrap.js) and
 [cli/dotfiles.js](cli/dotfiles.js) for exactly what gets written where and why; they're kept
 in sync with behavior, this file isn't.
@@ -13,7 +13,7 @@ in sync with behavior, this file isn't.
 ## Quickstart
 
 ```sh
-node cli/index.js --all        # first thing after cloning — generates CLAUDE.md, .agents/AGENTS.md, etc.
+node cli/index.js --all        # first thing after cloning — generates CLAUDE.md, GEMINI.md, etc.
 node cli/index.js              # interactive menu, pick agents by number
 npm test                       # smoke test after touching cli/
 ```
@@ -69,8 +69,8 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   `.ai/skills/personal/<name>/SKILL.md`, then `dotfiles import`.
 - Agent behavior: edit `.ai/agents/<name>.md`. Per-tool model/tool-list: edit the matching
   `.ai/agents/<name>.json` (only add the tool blocks you need). Then re-run the CLI — never
-  hand-edit `.claude/agents/`, `.opencode/agents/`, `.github/agents/`, or `.agents/AGENTS.md`
-  directly, they're regenerated every run.
+  hand-edit `.claude/agents/`, `.opencode/agents/`, or `.github/agents/` directly; they're
+  regenerated every run.
 - Home-scope tool config: edit `.ai/<tool>-settings.json` / `.ai/<tool>-hooks/`, then
   `dotfiles import`.
 - Machine-wide installers (Claude plugins, `mcp add` registrations, any other one-time

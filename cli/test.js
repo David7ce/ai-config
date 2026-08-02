@@ -178,11 +178,8 @@ async function main() {
   const ghBespoke = fs.readFileSync(path.join(targetDir, '.github/prompts/demo.prompt.md'), 'utf8');
   assert.match(ghBespoke, /Bespoke Copilot template/, '.github/prompts/ still copies the one hand-authored template verbatim');
 
-  const antigravity = fs.readFileSync(path.join(targetDir, '.agents/AGENTS.md'), 'utf8');
-  assert.match(antigravity, /# Antigravity Workspace Instructions/, '.agents/AGENTS.md generated for Antigravity CLI');
-
   const gemini = fs.readFileSync(path.join(targetDir, 'GEMINI.md'), 'utf8');
-  assert.match(gemini, /Read `.agents\/AGENTS\.md`/, 'legacy GEMINI.md points at Antigravity instructions');
+  assert.match(gemini, /# Antigravity Workspace Instructions/, 'GEMINI.md generated for Antigravity CLI');
 
   const claudeMcp = JSON.parse(fs.readFileSync(path.join(targetDir, '.mcp.json'), 'utf8'));
   assert.strictEqual(claudeMcp.mcpServers.demo.env.TOKEN, '${DEMO_TOKEN}', 'Claude MCP env placeholder');
@@ -204,7 +201,7 @@ async function main() {
   await wrap.run(['--antigravity', '--target', scaffoldTarget]);
   assert.ok(fs.existsSync(path.join(scaffoldTarget, '.ai', 'instructions.md')), 'scaffolds .ai/instructions.md');
   assert.ok(fs.existsSync(path.join(scaffoldTarget, 'CLAUDE.md')), 'still writes CLAUDE.md after scaffolding');
-  assert.ok(fs.existsSync(path.join(scaffoldTarget, '.agents', 'AGENTS.md')), 'writes Antigravity AGENTS.md after scaffolding');
+  assert.ok(fs.existsSync(path.join(scaffoldTarget, 'GEMINI.md')), 'writes Antigravity GEMINI.md after scaffolding');
 
   // dotfiles list touches the real ~/.claude (read-only) — just confirm it doesn't throw.
   // --all bypasses the interactive menu, which would otherwise block on stdin here.

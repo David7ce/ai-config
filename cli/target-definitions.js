@@ -42,15 +42,11 @@ function createTargetDefinitions(renderers) {
     {
       key: 'antigravity',
       label: 'Antigravity CLI',
-      file: 'GEMINI.md + .agents/AGENTS.md',
+      file: 'GEMINI.md',
       capabilities: { instructions: true },
-      // Antigravity is the successor to the former Gemini CLI integration. Keep both
-      // native entry points during the transition so existing workspaces do not lose
-      // their GEMINI.md file when regenerated.
-      generate: (src, targetDir) => [
-        write(targetDir, 'GEMINI.md', '# Antigravity Workspace Instructions\n\nRead `.agents/AGENTS.md` for the full instruction set.\n'),
-        write(targetDir, '.agents/AGENTS.md', genAntigravity(src)),
-      ],
+      // The current installation uses ~/.gemini/settings.json and the project-level
+      // GEMINI.md entry point. Do not generate the unverified .agents/ tree.
+      generate: (src, targetDir) => [write(targetDir, 'GEMINI.md', genAntigravity(src))],
     },
     { key: 'cursor', label: 'Cursor', file: '.cursor/rules/project.mdc', capabilities: { instructions: true }, generate: (src, targetDir) => [write(targetDir, '.cursor/rules/project.mdc', genCursor(src))] },
     { key: 'windsurf', label: 'Windsurf', file: '.windsurfrules', capabilities: { instructions: true }, generate: (src, targetDir) => [write(targetDir, '.windsurfrules', genWindsurf(src))] },
