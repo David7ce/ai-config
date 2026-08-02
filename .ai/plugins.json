@@ -186,6 +186,20 @@
     ]
   },
   {
+    "label": "runnet",
+    "description": "RuView Sensing Bridge (SENSE-BRIDGE) MCP server, registered as 'rvagent' — https://www.npmjs.com/package/@ruvnet/rvagent",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add rvagent -- npx @ruvnet/rvagent stdio" }
+    ]
+  },
+  {
+    "label": "ruview",
+    "description": "Ruflo Engine MCP server, registered as 'ruflo' — https://www.npmjs.com/package/ruflo",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add ruflo -- npx ruflo@latest mcp start" }
+    ]
+  },
+  {
     "label": "superpowers",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "superpowers@claude-plugins-official", "--scope", "user"] }
