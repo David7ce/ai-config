@@ -10,6 +10,7 @@ const wrap = require('./wrap');
 const dotfiles = require('./dotfiles');
 const { validateConfig } = require('../core/config-validator');
 const { AdapterRegistry } = require('../core/adapter-registry');
+const { createTargetDefinitions } = require('./target-definitions');
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -67,6 +68,16 @@ async function main() {
   assert.deepStrictEqual(registry.keys(), ['demo'], 'adapter registry lists registered adapters');
   assert.throws(() => registry.register({ key: 'demo', generate() {} }), /already registered/, 'adapter registry rejects duplicate keys');
   assert.throws(() => registry.register({ key: 'invalid' }), /must define generate/, 'adapter registry requires a generate function');
+
+  const targetRegistry = new AdapterRegistry(createTargetDefinitions({
+    genClaude() {}, genAgentsMd() {}, genGemini() {}, genAntigravity() {}, genCursor() {}, genWindsurf() {},
+    genCopilot() {}, genMcp() {}, genClaudeAgent() {}, genOpencodeAgent() {}, genGithubAgent() {}, genPromptFile() {},
+    materializeClaudeSkills() { return []; }, copilotBespokePrompts() { return []; },
+    write() {}, writeFresh() { return []; },
+  }));
+  assert.ok(targetRegistry.has('claude'), 'built-in target definitions include Claude');
+  assert.ok(targetRegistry.get('claude').capabilities.skills, 'built-in Claude adapter declares skills capability');
+  assert.ok(targetRegistry.get('mcp').capabilities.mcp, 'MCP target declares MCP capability');
 
   const validFixture = validateConfig(sourceDir);
   assert.ok(validFixture.valid, `fixture should validate: ${JSON.stringify(validFixture.diagnostics)}`);

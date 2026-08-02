@@ -10,10 +10,9 @@ const { write, pickFromMenu } = require('./lib');
 const { loadConfig, parseFrontmatter } = require('../core/config-loader');
 const { hasErrors } = require('../core/diagnostics');
 const { AdapterRegistry } = require('../core/adapter-registry');
+const { createTargetDefinitions } = require('./target-definitions');
 
-// Each entry is everything there is to know about one target: label + path for the menu,
-// generate() for `run()`. Adding a tool means adding one entry here — nowhere else.
-// Not "agents": mcp is a service config, not an agent, so TARGETS is the honest name.
+/* Target definitions are created after renderer declarations below.
 const TARGETS = [
   {
     key: 'claude',
@@ -89,9 +88,7 @@ const TARGETS = [
     file: '.mcp.json + .vscode/mcp.json',
     generate: (src, targetDir, sourceDir, sourceConfig) => genMcp(targetDir, sourceConfig),
   },
-];
-
-const adapters = new AdapterRegistry(TARGETS);
+]; */
 
 function parseArgs(argv) {
   const flags = new Set();
@@ -348,6 +345,27 @@ function materializeClaudeSkills(sourceDir, targetDir, src) {
   });
   return writeFresh(targetDir, '.claude/skills', entries);
 }
+
+const adapters = new AdapterRegistry(
+  createTargetDefinitions({
+    genClaude,
+    genAgentsMd,
+    genGemini,
+    genAntigravity,
+    genCursor,
+    genWindsurf,
+    genCopilot,
+    genMcp,
+    genClaudeAgent,
+    genOpencodeAgent,
+    genGithubAgent,
+    genPromptFile,
+    materializeClaudeSkills,
+    copilotBespokePrompts,
+    write,
+    writeFresh,
+  })
+);
 
 async function run(argv) {
   const { flags, opts } = parseArgs(argv);
