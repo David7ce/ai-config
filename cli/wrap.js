@@ -11,6 +11,7 @@ const { loadConfig, parseFrontmatter } = require('../core/config-loader');
 const { hasErrors } = require('../core/diagnostics');
 const { AdapterRegistry } = require('../core/adapter-registry');
 const { createTargetDefinitions } = require('./target-definitions');
+const { createRenderers } = require('./renderers');
 
 /* Target definitions are created after renderer declarations below.
 const TARGETS = [
@@ -346,26 +347,7 @@ function materializeClaudeSkills(sourceDir, targetDir, src) {
   return writeFresh(targetDir, '.claude/skills', entries);
 }
 
-const adapters = new AdapterRegistry(
-  createTargetDefinitions({
-    genClaude,
-    genAgentsMd,
-    genGemini,
-    genAntigravity,
-    genCursor,
-    genWindsurf,
-    genCopilot,
-    genMcp,
-    genClaudeAgent,
-    genOpencodeAgent,
-    genGithubAgent,
-    genPromptFile,
-    materializeClaudeSkills,
-    copilotBespokePrompts,
-    write,
-    writeFresh,
-  })
-);
+const adapters = new AdapterRegistry(createTargetDefinitions({ ...createRenderers({ write, parseFrontmatter }) }));
 
 async function run(argv) {
   const { flags, opts } = parseArgs(argv);

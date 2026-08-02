@@ -1,0 +1,133 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+function createRenderers({ write, parseFrontmatter }) {
+  function sections(src) {
+    const out = [];
+    if (src.hasInstructions) out.push(['Global rules', ['instructions.md']]);
+    if (src.coreSkills.length) out.push(['Core skills (always apply)', src.coreSkills]);
+    if (src.projectSkills.length) out.push(['Project skills (load by task scope)', src.projectSkills]);
+    if (src.prompts.length) out.push(['Prompts', src.prompts]);
+    if (src.agentDefs.length) out.push(['Agents', src.agentDefs]);
+    return out;
+  }
+
+  function renderRefList(src, { headers }) {
+    const lines = ['Source of truth: `.ai/` directory.', '', 'Read these files before any task:', ''];
+    for (const [title, files] of sections(src)) {
+      lines.push(headers ? `## ${title}` : `${title}:`);
+      for (const file of files) lines.push(`- \`.ai/${file}\``);
+      lines.push('');
+    }
+    return lines.join('\n').trimEnd() + '\n';
+  }
+
+  function writeFresh(targetDir, relDir, entries) {
+    const dir = path.join(targetDir, relDir);
+    fs.rmSync(dir, { recursive: true, force: true });
+    return entries.map(([filename, content]) => `${relDir}/${write(dir, filename, content)}`);
+  }
+
+  function genClaude(src) {
+    const lines = ['# Claude Workspace Instructions', ''];
+    if (src.hasInstructions) lines.push('@.ai/instructions.md', '');
+    for (const [title, files] of sections(src)) {
+      if (title === 'Global rules' || title === 'Project skills (load by task scope)') continue;
+      lines.push(`## ${title}`, '');
+      for (const file of files) lines.push(`@.ai/${file}`);
+      lines.push('');
+    }
+    if (src.projectSkills.length) lines.push('Project skills load on demand — see `.claude/skills/`.', '');
+    return lines.join('\n').trimEnd() + '\n';
+  }
+
+  const genAgentsMd = (src) => `# Agent Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+  const genGemini = () => '# Gemini Workspace Instructions\n\nSource of truth: `.ai/` directory.\n\nRead `AGENTS.md` for the full instruction set, skill references, and prompt definitions.\n';
+  const genAntigravity = (src) => `# Antigravity Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+  const genWindsurf = (src) => `# Windsurf Project Rules\n\n${renderRefList(src, { headers: false })}`;
+  const genCursor = (src) => `---\ndescription: Project-wide AI rules for this workspace\nalwaysApply: true\n---\n\n# Project Rules\n\n${renderRefList(src, { headers: false })}`;
+  const genCopilot = (src) => `# GitHub Copilot CLI Workspace Instructions\n\n${renderRefList(src, { headers: true })}`;
+
+  function genMcp(targetDir, sourceConfig) {
+    const source = sourceConfig.mcpServers;
+    const resolveEnv = (envObj, toPlaceholder) => {
+      if (!envObj) return undefined;
+      const out = {};
+      for (const [key, value] of Object.entries(envObj)) {
+        out[key] = value && typeof value === 'object' && 'fromEnv' in value ? toPlaceholder(value.fromEnv) : value;
+      }
+      return out;
+    };
+    const build = (toPlaceholder, includeStdioType) => {
+      const servers = {};
+      for (const [name, def] of Object.entries(source)) {
+        const entry = {};
+        if (def.url) {
+          entry.type = def.type || 'http';
+          entry.url = def.url;
+        } else {
+          if (includeStdioType) entry.type = 'stdio';
+          entry.command = def.command;
+          entry.args = def.args;
+        }
+        const env = resolveEnv(def.env, toPlaceholder);
+        if (env) entry.env = env;
+        servers[name] = entry;
+      }
+      return servers;
+    };
+    write(targetDir, '.mcp.json', JSON.stringify({ mcpServers: build((value) => `\${${value}}`, false) }, null, 2) + '\n');
+    write(targetDir, '.vscode/mcp.json', JSON.stringify({ servers: build((value) => `\${env:${value}}`, true) }, null, 2) + '\n');
+    return ['.mcp.json', '.vscode/mcp.json'];
+  }
+
+  const frontmatterBlock = (pairs) => ['---', ...pairs.map(([key, value]) => `${key}: ${value}`), '---'].join('\n');
+  const quote = (value) => JSON.stringify(value);
+  function agentBody(name, meta, toolLabel) {
+    const body = [`# ${name} Agent (${toolLabel})`, '', `Behavior and scope: see \`.ai/agents/${name}.md\`.`];
+    if (meta.workflow) body.push('', `Workflow: see \`.ai/${meta.workflow}\`.`);
+    return body.join('\n');
+  }
+  function genAgent({ name, meta }, tool, options = {}) {
+    const toolMeta = meta[tool] || {};
+    const fields = options.name === false ? [] : [['name', name]];
+    if (meta.description) fields.push(['description', quote(meta.description)]);
+    for (const key of options.fields || []) if (toolMeta[key]) fields.push([key, Array.isArray(toolMeta[key]) ? `[${toolMeta[key].join(', ')}]` : toolMeta[key]]);
+    return `${frontmatterBlock(fields)}\n\n${agentBody(name, meta, options.label || tool)}\n`;
+  }
+  const genClaudeAgent = (agent) => genAgent(agent, 'claude', { label: 'Claude', fields: ['model', 'tools'] });
+  const genOpencodeAgent = (agent) => genAgent(agent, 'opencode', { label: 'opencode', name: false, fields: ['mode', 'model'] });
+  const genGithubAgent = (agent) => genAgent(agent, 'github', { label: 'GitHub Copilot', fields: ['argument-hint', 'model', 'tools'] });
+  function genPromptFile({ name, meta }, { agentBinding, command } = {}) {
+    const fields = [];
+    if (command) fields.push(['command', `/${name}`]);
+    if (meta.description) fields.push(['description', quote(meta.description)]);
+    if (agentBinding && meta.agent) fields.push(['agent', meta.agent]);
+    const body = [`# ${meta.title || name}`, '', `Full workflow: \`.ai/prompts/${name}.md\``];
+    if (meta.checklist) body.push(`Checklist: \`.ai/${meta.checklist}\``);
+    return `${frontmatterBlock(fields)}\n\n${body.join('\n')}\n`;
+  }
+  function copilotBespokePrompts(sourceDir) {
+    const dir = path.join(sourceDir, 'prompts');
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir).filter((file) => file.endsWith('.prompt.md')).map((file) => [file, fs.readFileSync(path.join(dir, file), 'utf8')]);
+  }
+  function materializeClaudeSkills(sourceDir, targetDir, src) {
+    const entries = src.projectSkills.map((rel) => {
+      const [, , project, file] = rel.split('/');
+      const stem = file.replace(/\.md$/, '');
+      const name = stem === project || stem.startsWith(`${project}-`) ? stem : `${project}-${stem}`;
+      const raw = fs.readFileSync(path.join(sourceDir, rel), 'utf8');
+      const desc = parseFrontmatter(raw, path.join(sourceDir, rel), []).metadata.description || stem;
+      const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, `---\nname: ${name}\ndescription: ${desc}\n---\n`);
+      return [`${name}/SKILL.md`, body];
+    });
+    return writeFresh(targetDir, '.claude/skills', entries);
+  }
+
+  return { write, genClaude, genAgentsMd, genGemini, genAntigravity, genCursor, genWindsurf, genCopilot, genMcp, genClaudeAgent, genOpencodeAgent, genGithubAgent, genPromptFile, copilotBespokePrompts, materializeClaudeSkills, writeFresh };
+}
+
+module.exports = { createRenderers };
