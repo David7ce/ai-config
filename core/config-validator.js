@@ -5,6 +5,10 @@ const path = require('path');
 const { error, warning, hasErrors } = require('./diagnostics');
 const { loadConfig, CONFIG_VERSION } = require('./config-loader');
 
+const KNOWN_INSTALL_AGENTS = new Set(['claude', 'copilot', 'antigravity', 'gemini', 'codex', 'opencode', 'cursor', 'windsurf']);
+const INSTALL_KINDS = new Set(['plugin', 'mcp', 'tool', 'setup']);
+const INSTALL_SCOPES = new Set(['project', 'user', 'machine']);
+
 function validateConfig(sourceDir) {
   const loaded = loadConfig(sourceDir);
   const { config, diagnostics } = loaded;
@@ -36,9 +40,17 @@ function validateConfig(sourceDir) {
       add(error('INVALID_INSTALLATION', `Installation ${index + 1} requires label and installs[]`, 'plugins.json'));
       continue;
     }
+    if (installation.kind && !INSTALL_KINDS.has(installation.kind)) {
+      add(error('INVALID_INSTALL_KIND', `Unsupported installation kind: ${installation.kind}`, 'plugins.json', installation.label));
+    }
+    if (installation.scope && !INSTALL_SCOPES.has(installation.scope)) {
+      add(error('INVALID_INSTALL_SCOPE', `Unsupported installation scope: ${installation.scope}`, 'plugins.json', installation.label));
+    }
     for (const [stepIndex, step] of installation.installs.entries()) {
       if (!step || typeof step !== 'object' || (!step.command && !step.shell)) {
         add(error('INVALID_INSTALL_STEP', `Installation ${installation.label} step ${stepIndex + 1} requires command or shell`, 'plugins.json'));
+      } else if (step.agent && !KNOWN_INSTALL_AGENTS.has(step.agent)) {
+        add(error('INVALID_INSTALL_AGENT', `Unsupported installation agent: ${step.agent}`, 'plugins.json', installation.label));
       }
     }
   }

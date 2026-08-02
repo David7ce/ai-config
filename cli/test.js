@@ -95,6 +95,26 @@ async function main() {
   assert.strictEqual(claudeAdapter.key, 'claude', 'Claude adapter has the expected stable key');
   assert.strictEqual(claudeAdapter.file, 'CLAUDE.md', 'Claude adapter declares its primary output');
 
+  const pluginSource = path.join(tmp, 'plugin-source');
+  fs.mkdirSync(pluginSource, { recursive: true });
+  fs.writeFileSync(path.join(pluginSource, 'plugins.json'), JSON.stringify([
+    {
+      label: 'target-filter-test',
+      installs: [
+        { agent: 'claude', command: process.execPath, args: ['-e', 'console.log("claude-step")'] },
+        { agent: 'antigravity', command: process.execPath, args: ['-e', 'console.log(\'antigravity-step\')'] },
+      ],
+    },
+  ]));
+  const pluginTarget = { key: 'antigravity', label: 'Antigravity CLI', homeDir: path.join(tmp, 'plugin-home') };
+  const targetPluginLogs = [];
+  const originalLog = console.log;
+  console.log = (...args) => targetPluginLogs.push(args.join(' '));
+  dotfiles.pluginsOne(pluginSource, pluginTarget);
+  console.log = originalLog;
+  assert.ok(targetPluginLogs.some((line) => line.includes('antigravity-step')), 'plugins execute the selected target step');
+  assert.ok(!targetPluginLogs.some((line) => line.includes('claude-step')), 'plugins skip steps for other targets');
+
   const validFixture = validateConfig(sourceDir);
   assert.ok(validFixture.valid, `fixture should validate: ${JSON.stringify(validFixture.diagnostics)}`);
 
@@ -433,7 +453,7 @@ async function main() {
   fs.writeFileSync(
     path.join(sourceDir, 'plugins.json'),
     JSON.stringify([
-      { label: 'demo installer', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
+      { label: 'demo installer', installs: [{ command: process.execPath, args: ['--version'] }] },
       {
         label: 'shell-demo',
         // a single agent needing two chained CLI calls (marketplace add, then install) is
@@ -481,8 +501,8 @@ async function main() {
     };
     const dollarLineCount = (output) => output.split('\n').filter((l) => l.trim().startsWith('$ ')).length;
     const twoPackagesFixture = () => ([
-      { label: 'kept-package', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
-      { label: 'excluded-package', installs: [{ agent: 'demo', command: process.execPath, args: ['--version'] }] },
+      { label: 'kept-package', installs: [{ command: process.execPath, args: ['--version'] }] },
+      { label: 'excluded-package', installs: [{ command: process.execPath, args: ['--version'] }] },
     ]);
 
     // Case 1: a manifest listing only "plugins:kept-package" — plain `dotfiles plugins`
@@ -547,7 +567,7 @@ async function main() {
   assert.match(treeOutput, /claude-hooks\//, 'tree shows claude-hooks/');
   assert.match(treeOutput, /demo-hook/, 'tree lists hook names');
   assert.match(treeOutput, /demo installer/, 'tree expands plugins.json labels, not just the filename');
-  assert.match(treeOutput, /demo installer \[demo\]/, 'tree shows which agent(s) a package installs for');
+  assert.match(treeOutput, /demo installer( \[\])?/, 'tree shows the agent-neutral installer package');
 
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('ok — all checks passed');

@@ -308,6 +308,7 @@ function pluginsOne(sourceDir, target, manifest = null) {
     return;
   }
   let packages = JSON.parse(fs.readFileSync(file, 'utf8'));
+  packages = packages.map((pkg) => ({ ...pkg, installs: pkg.installs.filter((step) => !step.agent || TARGET_ALIASES[step.agent] === target.key || step.agent === target.key) }));
   const pluginsSelection = categorySelection(manifest, 'plugins');
   if (pluginsSelection !== null) {
     warnUnmatched(target, 'plugins', pluginsSelection, packages.map((p) => p.label));
@@ -322,7 +323,7 @@ function pluginsOne(sourceDir, target, manifest = null) {
     });
   }
   const quote = (a) => (/\s/.test(a) ? `"${a}"` : a);
-  for (const { label, installs } of packages) {
+  for (const { label, installs } of packages.filter((pkg) => pkg.installs.length > 0)) {
     for (const step of installs) {
       // shell:true with a single pre-quoted string (no separate args array) — the safe form;
       // shell:true *with* an args array lets the shell re-split unescaped strings (Node
