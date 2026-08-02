@@ -12,6 +12,7 @@ const { validateConfig } = require('../core/config-validator');
 const { AdapterRegistry } = require('../core/adapter-registry');
 const { createTargetDefinitions } = require('./target-definitions');
 const { createClaudeAdapter } = require('../adapters/claude');
+const { cleanup } = require('../core/cleanup');
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -72,7 +73,7 @@ async function main() {
 
   const targetRegistry = new AdapterRegistry(createTargetDefinitions({
     genClaude() {}, genAgentsMd() {}, genGemini() {}, genAntigravity() {}, genCursor() {}, genWindsurf() {},
-    genCopilot() {}, genMcp() {}, genClaudeAgent() {}, genOpencodeAgent() {}, genGithubAgent() {}, genPromptFile() {},
+    genCopilot() {}, genMcp() {}, genCodexMcp() {}, genClaudeAgent() {}, genOpencodeAgent() {}, genGithubAgent() {}, genPromptFile() {},
     materializeClaudeSkills() { return []; }, copilotBespokePrompts() { return []; },
     write() {}, writeFresh() { return []; },
   }));
@@ -94,6 +95,31 @@ async function main() {
   });
   assert.strictEqual(claudeAdapter.key, 'claude', 'Claude adapter has the expected stable key');
   assert.strictEqual(claudeAdapter.file, 'CLAUDE.md', 'Claude adapter declares its primary output');
+
+  const cleanupHome = path.join(tmp, 'cleanup-home');
+  fs.mkdirSync(path.join(cleanupHome, '.claude/projects/demo'), { recursive: true });
+  fs.mkdirSync(path.join(cleanupHome, '.claude/plugins/cache/old-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(cleanupHome, '.claude/plugins/marketplaces/old-marketplace'), { recursive: true });
+  fs.mkdirSync(path.join(cleanupHome, '.codex/.tmp/plugins/old-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(cleanupHome, '.codex/vendor_imports/old-import'), { recursive: true });
+  fs.mkdirSync(path.join(cleanupHome, '.copilot/session-state/old'), { recursive: true });
+  fs.writeFileSync(path.join(cleanupHome, '.claude/projects/demo/old.jsonl'), 'old\n');
+  fs.writeFileSync(path.join(cleanupHome, '.claude/projects/demo/new.jsonl'), 'new\n');
+  fs.writeFileSync(path.join(cleanupHome, '.codex/config.toml'), 'mcp_servers = {}\n');
+  const now = Date.now();
+  fs.utimesSync(path.join(cleanupHome, '.claude/projects/demo/old.jsonl'), new Date(now - 60 * 86400000), new Date(now - 60 * 86400000));
+  const dryRun = cleanup(cleanupHome, { agents: ['claude'], olderThanDays: 30, now });
+  assert.strictEqual(dryRun.selected.length, 1, 'cleanup dry run selects old Claude transcripts');
+  assert.ok(fs.existsSync(path.join(cleanupHome, '.claude/projects/demo/old.jsonl')), 'cleanup dry run does not delete files');
+  cleanup(cleanupHome, { agents: ['claude'], olderThanDays: 30, apply: true, now });
+  assert.ok(!fs.existsSync(path.join(cleanupHome, '.claude/projects/demo/old.jsonl')), 'cleanup apply removes selected transcripts');
+  assert.ok(fs.existsSync(path.join(cleanupHome, '.claude/projects/demo/new.jsonl')), 'cleanup preserves recent transcripts');
+  const allCleanup = cleanup(cleanupHome, { agents: ['claude', 'codex'], olderThanDays: 0, apply: true, now: Date.now() });
+  assert.ok(allCleanup.selected.some((item) => item.target === 'plugin-cache'), 'cleanup includes plugin caches');
+  assert.ok(!fs.existsSync(path.join(cleanupHome, '.claude/plugins/cache/old-plugin')), 'cleanup removes old Claude plugin cache');
+  assert.ok(!fs.existsSync(path.join(cleanupHome, '.codex/.tmp/plugins/old-plugin')), 'cleanup removes old Codex plugin cache');
+  assert.ok(!fs.existsSync(path.join(cleanupHome, '.codex/vendor_imports/old-import')), 'cleanup removes old Codex imported plugin content');
+  assert.ok(fs.existsSync(path.join(cleanupHome, '.codex/config.toml')), 'cleanup preserves Codex MCP/configuration');
 
   const pluginSource = path.join(tmp, 'plugin-source');
   fs.mkdirSync(pluginSource, { recursive: true });
@@ -214,6 +240,11 @@ async function main() {
   assert.strictEqual(vscodeMcp.servers.demo.type, 'stdio', 'VS Code MCP has type: stdio');
   assert.strictEqual(vscodeMcp.servers.remote.type, 'http', 'VS Code MCP remote server type: http');
   assert.strictEqual(vscodeMcp.servers.remote.url, 'https://example.com/mcp', 'VS Code MCP remote server url');
+
+  const codexConfig = fs.readFileSync(path.join(targetDir, '.codex/config.toml'), 'utf8');
+  assert.match(codexConfig, /\[mcp_servers\.demo\]/, 'Codex config contains stdio MCP server');
+  assert.match(codexConfig, /\[mcp_servers\.remote\]/, 'Codex config contains remote MCP server');
+  assert.match(codexConfig, /url = "https:\/\/example\.com\/mcp"/, 'Codex config contains remote MCP URL');
 
   // scaffold: pointing at a source that doesn't exist yet should create an empty skeleton, not throw
   const scaffoldTarget = path.join(tmp, 'scaffold-target');

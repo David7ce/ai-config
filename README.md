@@ -16,6 +16,9 @@ in sync with behavior, this file isn't.
 node cli/index.js --all        # first thing after cloning — generates CLAUDE.md, GEMINI.md, etc.
 node cli/index.js              # interactive menu, pick agents by number
 npm test                       # smoke test after touching cli/
+node cli/index.js clean --agent claude --older-than 30  # preview old conversations
+node cli/index.js clean --agent claude --older-than 30 --apply  # delete after reviewing preview
+node cli/index.js clean --agent claude,codex --older-than 30  # include plugin/runtime data
 ```
 
 To use this on another project: `cd` there and point `--source` at this repo's `.ai/`:
@@ -24,10 +27,23 @@ To use this on another project: `cd` there and point `--source` at this repo's `
 npx github:David7ce/ai-config --source /path/to/ai-config/.ai
 ```
 
+`clean` also covers reclaimable Claude and Codex runtime data: old conversation transcripts,
+plugin caches, plugin marketplaces/imports, and selected session databases. It does **not**
+delete MCP configuration: Claude's `.mcp.json`/`~/.claude.json` or Codex's `config.toml` and
+`mcp_servers` entries are preserved. Claude's MCP authentication cache may be removed and may
+require signing in again. Codex supports MCP through `codex mcp` and
+`[mcp_servers.<name>]` in `~/.codex/config.toml`; Codex plugins can also bundle MCP servers.
+
 ## Building blocks
 
 `.ai/` speaks the vocabulary every agentic tool shares today. Each concept has exactly one
 generic source of truth; the CLI materializes it into each tool's native shape.
+
+MCP servers in `.ai/mcp-servers.json` are generated for Claude/VS Code and Codex. Codex uses
+project-scoped `.codex/config.toml` entries under `[mcp_servers.<name>]`; use `--codex` when
+generating a workspace. Codex supports MCP through `codex mcp` and also supports plugins that
+bundle MCP servers. Plugin installation remains an explicit machine-level operation via
+`dotfiles plugins`; plugin caches and installed marketplace content are handled by `clean`.
 
 | Concept          | Source of truth                                                                                                                                            | Materialized as                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

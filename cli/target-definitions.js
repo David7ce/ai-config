@@ -13,6 +13,7 @@ function createTargetDefinitions(renderers) {
     genWindsurf,
     genCopilot,
     genMcp,
+    genCodexMcp,
     genClaudeAgent,
     genOpencodeAgent,
     genGithubAgent,
@@ -27,8 +28,11 @@ function createTargetDefinitions(renderers) {
     createClaudeAdapter({ renderers }),
     {
       key: 'codex', label: 'Codex', file: 'AGENTS.md',
-      capabilities: { instructions: true },
-      generate: (src, targetDir) => [write(targetDir, 'AGENTS.md', genAgentsMd(src))],
+      capabilities: { instructions: true, mcp: true, plugins: true },
+      generate: (src, targetDir, sourceDir, sourceConfig) => [
+        write(targetDir, 'AGENTS.md', genAgentsMd(src)),
+        genCodexMcp(targetDir, sourceConfig),
+      ],
     },
     {
       key: 'opencode', label: 'opencode', file: 'AGENTS.md + .opencode/agents, .opencode/commands',
