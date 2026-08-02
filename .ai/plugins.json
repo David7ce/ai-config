@@ -40,12 +40,6 @@
     ]
   },
   {
-    "label": "chrome-devtools-mcp",
-    "installs": [
-      { "agent": "claude", "shell": "claude plugin marketplace add ChromeDevTools/chrome-devtools-mcp && claude plugin install chrome-devtools-mcp@chrome-devtools-plugins --scope user" }
-    ]
-  },
-  {
     "label": "claude-md-management",
     "description": "audits CLAUDE.md quality, captures session learnings back into it — on-theme for this repo since .ai/skills/core/*.md is this project's own CLAUDE.md source",
     "installs": [
