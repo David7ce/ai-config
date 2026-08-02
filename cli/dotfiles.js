@@ -12,13 +12,13 @@
 // (claude-settings.json, claude-hooks/) — settings.json's shape (effortLevel, hooks,
 // enabledPlugins, ...) is Claude Code's own, not portable, so the prefix is honest about
 // scope without needing a directory for it.
-// Claude Code, GitHub Copilot CLI, and Gemini CLI are wired up today — their home paths
-// and shapes are verified. Antigravity CLI shares the Gemini home path in this repo.
+// Claude Code, GitHub Copilot CLI, and Antigravity CLI are wired up today — their home
+// paths and shapes are verified. Antigravity retains the former Gemini home path.
 // Deliberately NOT tracked: plugins/ (9+ MB of cache + marketplace git clones) and ide/
 // (per-process .lock files, pure runtime state, not config) — plugins.json (see `plugins`
 // action below) reproduces both on demand instead, package-manager style, so there's
 // nothing to duplicate or go stale.
-// Codex, Gemini CLI, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
+// Codex, opencode, Cursor etc. belong in DOTFILE_TARGETS once there's real
 // content for that tool AND a confirmed home-dir path — don't guess at where another
 // tool's user config lives, a wrong guess here writes into a real profile.
 // import/plugins bring EVERYTHING across by default. To bring a subset, hand-write
@@ -35,17 +35,17 @@ const { mirrorDir, pickFromMenu } = require('./lib');
 
 // dirName, not a precomputed absolute path: lets --home override where "home" is (see run()),
 // so `import` can be pointed at a scratch dir instead of the real profile for testing.
-// skills: whether this tool has a directory-based personal-skill concept at all (Gemini
-// CLI doesn't — see the design spec's research table). Every other category (hooks,
+// skills: whether this tool has a directory-based personal-skill concept at all
+// (Antigravity does not currently expose one). Every other category (hooks,
 // settings.json) already works the same way for every target with no flag needed.
 const DOTFILE_TARGETS = [
   { key: 'claude', label: 'Claude Code', dirName: '.claude', skills: true },
   { key: 'copilot', label: 'GitHub Copilot CLI', dirName: '.copilot', skills: true },
-  { key: 'gemini', label: 'Gemini CLI / Antigravity CLI', dirName: '.gemini', skills: false },
+  { key: 'antigravity', label: 'Antigravity CLI', dirName: '.gemini', skills: false },
 ];
 
 const TARGET_ALIASES = {
-  antigravity: 'gemini',
+  gemini: 'antigravity',
 };
 
 function parseArgs(argv) {

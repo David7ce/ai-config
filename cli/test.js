@@ -77,6 +77,8 @@ async function main() {
     write() {}, writeFresh() { return []; },
   }));
   assert.ok(targetRegistry.has('claude'), 'built-in target definitions include Claude');
+  assert.ok(targetRegistry.has('antigravity'), 'built-in target definitions use Antigravity as the canonical Google adapter');
+  assert.ok(!targetRegistry.has('gemini'), 'Gemini is no longer a canonical target key');
   assert.ok(targetRegistry.get('claude').capabilities.skills, 'built-in Claude adapter declares skills capability');
   assert.ok(targetRegistry.get('mcp').capabilities.mcp, 'MCP target declares MCP capability');
 
@@ -180,7 +182,7 @@ async function main() {
   assert.match(antigravity, /# Antigravity Workspace Instructions/, '.agents/AGENTS.md generated for Antigravity CLI');
 
   const gemini = fs.readFileSync(path.join(targetDir, 'GEMINI.md'), 'utf8');
-  assert.match(gemini, /Read `AGENTS\.md`/, 'GEMINI.md points at AGENTS.md');
+  assert.match(gemini, /Read `.agents\/AGENTS\.md`/, 'legacy GEMINI.md points at Antigravity instructions');
 
   const claudeMcp = JSON.parse(fs.readFileSync(path.join(targetDir, '.mcp.json'), 'utf8'));
   assert.strictEqual(claudeMcp.mcpServers.demo.env.TOKEN, '${DEMO_TOKEN}', 'Claude MCP env placeholder');
@@ -231,8 +233,8 @@ async function main() {
     );
     assert.match(
       output,
-      new RegExp(`Gemini CLI / Antigravity CLI: \\.ai/ \\(source of truth\\) vs ${path.join(targetsHome, '.gemini').replace(/[\\.]/g, '\\$&')}`),
-      'DOTFILE_TARGETS: antigravity alias resolves to Gemini homeDir and shared label'
+      new RegExp(`Antigravity CLI: \\.ai/ \\(source of truth\\) vs ${path.join(targetsHome, '.gemini').replace(/[\\.]/g, '\\$&')}`),
+      'DOTFILE_TARGETS: antigravity resolves to the former Gemini homeDir'
     );
   }
 

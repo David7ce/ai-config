@@ -8,7 +8,6 @@ function createTargetDefinitions(renderers) {
   const {
     genClaude,
     genAgentsMd,
-    genGemini,
     genAntigravity,
     genCursor,
     genWindsurf,
@@ -40,8 +39,19 @@ function createTargetDefinitions(renderers) {
         ...writeFresh(targetDir, '.opencode/commands', sourceConfig.prompts.map((p) => [`${p.id}.md`, genPromptFile({ name: p.id, meta: p.metadata }, { agentBinding: true })])),
       ],
     },
-    { key: 'gemini', label: 'Gemini CLI', file: 'GEMINI.md', capabilities: { instructions: true }, generate: (src, targetDir) => [write(targetDir, 'GEMINI.md', genGemini())] },
-    { key: 'antigravity', label: 'Antigravity CLI', file: '.agents/AGENTS.md', capabilities: { instructions: true }, generate: (src, targetDir) => [write(targetDir, '.agents/AGENTS.md', genAntigravity(src))] },
+    {
+      key: 'antigravity',
+      label: 'Antigravity CLI',
+      file: 'GEMINI.md + .agents/AGENTS.md',
+      capabilities: { instructions: true },
+      // Antigravity is the successor to the former Gemini CLI integration. Keep both
+      // native entry points during the transition so existing workspaces do not lose
+      // their GEMINI.md file when regenerated.
+      generate: (src, targetDir) => [
+        write(targetDir, 'GEMINI.md', '# Antigravity Workspace Instructions\n\nRead `.agents/AGENTS.md` for the full instruction set.\n'),
+        write(targetDir, '.agents/AGENTS.md', genAntigravity(src)),
+      ],
+    },
     { key: 'cursor', label: 'Cursor', file: '.cursor/rules/project.mdc', capabilities: { instructions: true }, generate: (src, targetDir) => [write(targetDir, '.cursor/rules/project.mdc', genCursor(src))] },
     { key: 'windsurf', label: 'Windsurf', file: '.windsurfrules', capabilities: { instructions: true }, generate: (src, targetDir) => [write(targetDir, '.windsurfrules', genWindsurf(src))] },
     {

@@ -1,7 +1,7 @@
 # AI Config
 
 Dotfiles for AI agents: one `.ai/` source of truth, generated into each tool's own config
-shape (Claude Code, Codex, opencode, Gemini CLI / Antigravity CLI, Cursor, Windsurf,
+shape (Claude Code, Codex, opencode, Antigravity CLI, Cursor, Windsurf,
 GitHub Copilot CLI, MCP). Clone
 anywhere, run the CLI, get every agent reading the same rules in its native format.
 
@@ -77,8 +77,8 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   setup command): edit `.ai/plugins.json`, then `dotfiles plugins`.
 - Project-scoped MCP servers (this project's, shared via git): edit `.ai/mcp-servers.json`,
   then `node cli/index.js --mcp`.
-- Applying this machine's dotfiles (Claude Code, GitHub Copilot CLI, Gemini CLI /
-  Antigravity CLI): `node cli/index.js dotfiles list` / `import` / `plugins` / `tree` — see
+- Applying this machine's dotfiles (Claude Code, GitHub Copilot CLI, Antigravity CLI):
+  `node cli/index.js dotfiles list` / `import` / `plugins` / `tree` — see
   [cli/dotfiles.js](cli/dotfiles.js) for flags and the `--home` sandbox option for testing
   without touching your real profile. `import` mirrors everything by default (personal skills,
   hooks, settings.json). To bring over a subset instead, hand-write `.ai/<key>-import.txt`

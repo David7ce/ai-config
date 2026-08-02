@@ -2,7 +2,7 @@
 // wrap: generates per-tool AI agent config from a project's .ai/ (source of truth).
 // No arrow-key TUI dependency: a plain numbered menu via readline covers "menu" at zero deps
 // and is more reliably cross-platform (Windows terminals + raw mode are a real footgun).
-// Pass flags to skip the menu (scriptable/CI use): --claude --codex --opencode --gemini
+// Pass flags to skip the menu (scriptable/CI use): --claude --codex --opencode --antigravity
 // --antigravity --cursor --windsurf --copilot --mcp --all --target <dir> --source <dir>
 const fs = require('fs');
 const path = require('path');
@@ -12,6 +12,8 @@ const { hasErrors } = require('../core/diagnostics');
 const { AdapterRegistry } = require('../core/adapter-registry');
 const { createTargetDefinitions } = require('./target-definitions');
 const { createRenderers } = require('./renderers');
+
+const TARGET_ALIASES = { gemini: 'antigravity' };
 
 /* Target definitions are created after renderer declarations below.
 const TARGETS = [
@@ -148,7 +150,11 @@ async function run(argv) {
   if (flags.has('all')) {
     selected = new Set(adapters.keys());
   } else {
-    for (const t of adapters.list()) if (flags.has(t.key)) selected.add(t.key);
+    for (const t of adapters.list()) {
+      if (flags.has(t.key) || Object.entries(TARGET_ALIASES).some(([alias, key]) => key === t.key && flags.has(alias))) {
+        selected.add(t.key);
+      }
+    }
   }
 
   if (selected.size === 0 && flags.size === 0) {
