@@ -161,7 +161,7 @@
     "label": "playwright",
     "description": "Microsoft's browser automation / E2E testing MCP server",
     "installs": [
-      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "playwright@claude-plugins-official", "--scope", "user"] },
+      { "agent": "claude", "shell": "claude plugin install playwright@claude-plugins-official --scope user && node cli/playwright-chromium-fallback.js" },
       { "agent": "codex", "command": "codex", "args": ["mcp", "add", "playwright", "--", "npx", "-y", "@playwright/mcp@latest"] }
     ]
   },
