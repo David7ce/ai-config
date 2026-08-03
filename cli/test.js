@@ -12,7 +12,7 @@ const { validateConfig } = require('../core/config-validator');
 const { AdapterRegistry } = require('../core/adapter-registry');
 const { createTargetDefinitions } = require('./target-definitions');
 const { createClaudeAdapter } = require('../adapters/claude');
-const { cleanup } = require('../core/cleanup');
+const { cleanup, appDataDir, resolveAgents } = require('../core/cleanup');
 
 function buildFixture(sourceDir) {
   fs.mkdirSync(path.join(sourceDir, 'skills/core'), { recursive: true });
@@ -120,6 +120,51 @@ async function main() {
   assert.ok(!fs.existsSync(path.join(cleanupHome, '.codex/.tmp/plugins/old-plugin')), 'cleanup removes old Codex plugin cache');
   assert.ok(!fs.existsSync(path.join(cleanupHome, '.codex/vendor_imports/old-import')), 'cleanup removes old Codex imported plugin content');
   assert.ok(fs.existsSync(path.join(cleanupHome, '.codex/config.toml')), 'cleanup preserves Codex MCP/configuration');
+
+  // resolveAgents: bare family names (claude/codex) expand to their concrete cli/desktop/
+  // vscode keys; an already-concrete key (or an unrelated one, like copilot) passes through.
+  assert.deepStrictEqual(resolveAgents(['claude']).sort(), ['claude-cli', 'claude-desktop', 'claude-vscode'], 'resolveAgents: "claude" expands to its cli/desktop/vscode targets');
+  assert.deepStrictEqual(resolveAgents(['codex']).sort(), ['codex-cli', 'codex-desktop', 'codex-vscode'], 'resolveAgents: "codex" expands to its cli/desktop/vscode targets');
+  assert.deepStrictEqual(resolveAgents(['claude-cli', 'copilot']), ['claude-cli', 'copilot'], 'resolveAgents: already-concrete/unrelated keys pass through unchanged');
+
+  // claude-desktop/claude-vscode (Claude Desktop app, Claude Code's VS Code extension) and
+  // codex-desktop/codex-vscode (ChatGPT Desktop, Codex's VS Code extension) cleanup targets
+  // live under the OS app-data dir, not directly under $HOME. Backdate every candidate path
+  // explicitly (rather than relying on olderThanDays: 0 against just-written mtimes) — on
+  // Windows, a file's reported mtime can land a fraction of a millisecond ahead of a
+  // Date.now() captured immediately afterward, which makes a zero-margin comparison flaky.
+  const appData = appDataDir(cleanupHome);
+  const desktopNow = Date.now();
+  const oneDayAgo = new Date(desktopNow - 86400000);
+  fs.mkdirSync(path.join(appData, 'Claude/Cache/old-entry'), { recursive: true });
+  fs.mkdirSync(path.join(appData, 'Claude/Claude Extensions/some-extension'), { recursive: true });
+  fs.mkdirSync(path.join(appData, 'Claude/claude-code-sessions/old-session'), { recursive: true });
+  fs.mkdirSync(path.join(appData, 'Claude/logs'), { recursive: true });
+  fs.writeFileSync(path.join(appData, 'Claude/logs/main.log'), 'old\n');
+  fs.writeFileSync(path.join(appData, 'Claude/claude_desktop_config.json'), '{}\n');
+  fs.mkdirSync(path.join(appData, 'Code/CachedExtensionVSIXs'), { recursive: true });
+  fs.writeFileSync(path.join(appData, 'Code/CachedExtensionVSIXs/anthropic.claude-code-2.1.220-win32-x64'), 'zip\n');
+  fs.writeFileSync(path.join(appData, 'Code/CachedExtensionVSIXs/openai.chatgpt-1.0.0-win32-x64'), 'zip\n');
+  fs.writeFileSync(path.join(appData, 'Code/CachedExtensionVSIXs/some-other.extension-1.0.0'), 'zip\n');
+  for (const p of [
+    'Claude/Cache',
+    'Claude/claude-code-sessions/old-session',
+    'Claude/logs/main.log',
+    'Code/CachedExtensionVSIXs/anthropic.claude-code-2.1.220-win32-x64',
+    'Code/CachedExtensionVSIXs/openai.chatgpt-1.0.0-win32-x64',
+    'Code/CachedExtensionVSIXs/some-other.extension-1.0.0',
+  ]) fs.utimesSync(path.join(appData, p), oneDayAgo, oneDayAgo);
+  const familyCleanup = cleanup(cleanupHome, { agents: ['claude', 'codex'], olderThanDays: 0, apply: true, now: desktopNow });
+  assert.ok(familyCleanup.selected.some((item) => item.target === 'render-cache' && item.agent === 'claude-desktop'), 'cleanup includes Claude Desktop render/GPU/browser caches via the "claude" family alias');
+  assert.ok(familyCleanup.selected.some((item) => item.agent === 'codex-vscode'), 'cleanup includes the Codex VS Code extension cache via the "codex" family alias');
+  assert.ok(!fs.existsSync(path.join(appData, 'Claude/Cache/old-entry')), 'cleanup removes old Claude Desktop cache dir');
+  assert.ok(!fs.existsSync(path.join(appData, 'Claude/claude-code-sessions/old-session')), 'cleanup removes old Claude Desktop coding session data');
+  assert.ok(!fs.existsSync(path.join(appData, 'Claude/logs/main.log')), 'cleanup removes old Claude Desktop logs');
+  assert.ok(!fs.existsSync(path.join(appData, 'Code/CachedExtensionVSIXs/anthropic.claude-code-2.1.220-win32-x64')), 'cleanup removes Claude Code VS Code extension vsix cache');
+  assert.ok(!fs.existsSync(path.join(appData, 'Code/CachedExtensionVSIXs/openai.chatgpt-1.0.0-win32-x64')), 'cleanup removes Codex VS Code extension vsix cache');
+  assert.ok(fs.existsSync(path.join(appData, 'Code/CachedExtensionVSIXs/some-other.extension-1.0.0')), "cleanup does not touch other extensions' vsix cache");
+  assert.ok(fs.existsSync(path.join(appData, 'Claude/Claude Extensions/some-extension')), 'cleanup preserves installed Claude Desktop extensions');
+  assert.ok(fs.existsSync(path.join(appData, 'Claude/claude_desktop_config.json')), 'cleanup preserves Claude Desktop MCP configuration');
 
   const pluginSource = path.join(tmp, 'plugin-source');
   fs.mkdirSync(pluginSource, { recursive: true });

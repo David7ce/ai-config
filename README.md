@@ -16,9 +16,10 @@ in sync with behavior, this file isn't.
 node cli/index.js --all        # first thing after cloning — generates CLAUDE.md, GEMINI.md, etc.
 node cli/index.js              # interactive menu, pick agents by number
 npm test                       # smoke test after touching cli/
-node cli/index.js clean --agent claude --older-than 30  # preview old conversations
+node cli/index.js clean --agent claude --older-than 30  # preview: Claude CLI + Desktop + VS Code extension
 node cli/index.js clean --agent claude --older-than 30 --apply  # delete after reviewing preview
-node cli/index.js clean --agent claude,codex --older-than 30  # include plugin/runtime data
+node cli/index.js clean --agent claude,codex --older-than 30  # both product families
+node cli/index.js clean --agent claude-cli --older-than 30  # just the Claude Code CLI, not Desktop/VS Code
 ```
 
 To use this on another project: `cd` there and point `--source` at this repo's `.ai/`:
@@ -27,15 +28,42 @@ To use this on another project: `cd` there and point `--source` at this repo's `
 npx github:David7ce/ai-config --source /path/to/ai-config/.ai
 ```
 
-`clean` also covers reclaimable Claude and Codex runtime data: old conversation transcripts,
-plugin caches, plugin marketplaces/imports, and selected session databases. It does **not**
-delete MCP configuration: Claude's `.mcp.json`/`~/.claude.json` or Codex's `config.toml` and
-`mcp_servers` entries are preserved. Claude's MCP authentication cache may be removed and may
-require signing in again. Codex supports MCP through `codex mcp` and
-`[mcp_servers.<name>]` in `~/.codex/config.toml`; Codex plugins can also bundle MCP servers.
-For Claude user-scoped MCP, optionally maintain `.ai/claude-user-mcp.json`; importing it updates
+`clean --agent <name>` accepts either a **product family** (`claude`, `codex`) or one of its
+concrete sub-targets, named `<family>-cli` / `<family>-desktop` / `<family>-vscode` so the flag
+says on its face which app it touches:
+
+| `--agent` value  | Covers                                                                                 |
+|-------------------|-----------------------------------------------------------------------------------------|
+| `claude`          | all three Claude targets below (shorthand)                                             |
+| `claude-cli`      | Claude Code CLI (`~/.claude`) — conversation transcripts, plugin cache/marketplaces, MCP auth cache |
+| `claude-desktop`  | Claude Desktop app — render/GPU/browser caches, coding/agent-mode session data, bundled CLI version cache, logs |
+| `claude-vscode`   | Claude Code's VS Code extension — its downloaded `.vsix` package cache (stable + Insiders) |
+| `codex`           | all three Codex targets below (shorthand)                                              |
+| `codex-cli`       | Codex CLI (`~/.codex`) — archived sessions, runtime/session state, plugin cache/imports |
+| `codex-desktop`   | ChatGPT Desktop app — render/GPU/browser caches, logs (**unverified**, see below)       |
+| `codex-vscode`    | Codex's VS Code extension (`openai.chatgpt`) — its `.vsix` package cache (stable + Insiders) |
+| `copilot`         | GitHub Copilot CLI — session state                                                     |
+
+It does **not** delete MCP configuration: Claude's `.mcp.json`/`~/.claude.json` or Codex's
+`config.toml` and `mcp_servers` entries are preserved. Claude's MCP authentication cache may be
+removed and may require signing in again. Codex supports MCP through `codex mcp` and
+`[mcp_servers.<name>]` in `~/.codex/config.toml`; Codex plugins can also bundle MCP servers. For
+Claude user-scoped MCP, optionally maintain `.ai/claude-user-mcp.json`; importing it updates
 only the `mcpServers` field in `~/.claude.json` and preserves the rest of Claude's project and
 approval state.
+
+The `-desktop`/`-vscode` targets live under the OS app-data dir instead of directly under
+`$HOME` (`%APPDATA%` on Windows, `~/Library/Application Support` on macOS, `~/.config` on
+Linux) and leave config/installed content alone — Claude Desktop's `claude_desktop_config.json`
+(its MCP config) and `Claude Extensions` (installed desktop extensions) are preserved, as is
+every other extension's `.vsix` cache. `claude-desktop`/`claude-vscode` are verified against a
+real Windows install; on macOS/Linux the app-data root and `Claude`/`Code` folder names are
+standard Electron/VS Code conventions but unchecked. **`codex-desktop` is unverified
+everywhere** — there was no ChatGPT Desktop install available to check, so `ChatGPT` is a
+best-effort guess at its app-data folder name (only generic Electron/Chromium cache folder
+names are listed, since those aren't app-specific). If that guess is wrong the target just
+matches nothing — harmless, but confirm the real folder name and fix `codex-desktop` in
+[core/cleanup.js](core/cleanup.js) before relying on it to reclaim space.
 
 ## Building blocks
 
