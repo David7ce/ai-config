@@ -10,5 +10,9 @@
   "raindrop": {
     "url": "https://api.raindrop.io/rest/v2/ai/mcp",
     "type": "http"
+  },
+  "hyperframes": {
+    "url": "https://hyperframes.heygen.com",
+    "type": "http"
   }
 }
