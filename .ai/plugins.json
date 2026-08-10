@@ -110,6 +110,13 @@
     ]
   },
   {
+    "label": "daw-mcp",
+    "description": "Bitwig/Ableton MIDI clip bridge — https://github.com/ptaczek/daw-mcp. Clone/build to ~/.local/daw-mcp first (npm install && npm run build in mcp-server/) and install the Bitwig/Ableton extension per its README; this step only registers the built server with Claude",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add daw --scope user -- node %USERPROFILE%\\.local\\daw-mcp\\mcp-server\\dist\\mcp-server.js" }
+    ]
+  },
+  {
     "label": "design",
     "description": "Anthropic-built plugin — critique, design systems, UX writing, accessibility audits — knowledge-work-plugins marketplace, needs the knowledge-work-plugins entry installed first",
     "installs": [
