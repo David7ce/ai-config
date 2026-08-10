@@ -143,6 +143,16 @@
     "installs": [{ "command": "npx", "args": ["-y", "firecrawl-cli@latest", "init", "--all", "--browser"] }]
   },
   {
+    "label": "fl-studio-mcp",
+    "description": "karl-andres/fl-studio-mcp — control FL Studio (transport, mixer, channels, plugins, piano roll) from Claude via a loopMIDI bridge and an FL Studio controller script. Needs loopMIDI installed manually first (https://www.tobias-erichsen.de/software/loopmidi.html, create a virtual port, keep it running) and, after this step, a one-time manual FL Studio config: restart FL Studio, Options > MIDI Settings, select the loopMIDI port, set Controller type to FLStudioMCP, enable the port",
+    "installs": [
+      {
+        "agent": "claude",
+        "shell": "if not exist \"%USERPROFILE%\\.local\\fl-studio-mcp\" git clone https://github.com/karl-andres/fl-studio-mcp.git \"%USERPROFILE%\\.local\\fl-studio-mcp\" && cd /d \"%USERPROFILE%\\.local\\fl-studio-mcp\" && uv sync --python 3.12 && if not exist \"%USERPROFILE%\\Documents\\Image-Line\\FL Studio\\Settings\\Hardware\\FLStudioMCP\" mkdir \"%USERPROFILE%\\Documents\\Image-Line\\FL Studio\\Settings\\Hardware\\FLStudioMCP\" && copy /y fl_controller\\device_FLStudioMCP.py \"%USERPROFILE%\\Documents\\Image-Line\\FL Studio\\Settings\\Hardware\\FLStudioMCP\\\" && copy /y scripts\\ComposeWithLLM.pyscript \"%USERPROFILE%\\Documents\\Image-Line\\FL Studio\\Settings\\Piano roll scripts\\\" && claude mcp add -s user fl-studio -- uv run --directory \"%USERPROFILE%\\.local\\fl-studio-mcp\" fl-studio-mcp"
+      }
+    ]
+  },
+  {
     "label": "frontend-design",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "frontend-design@claude-plugins-official", "--scope", "user"] }
