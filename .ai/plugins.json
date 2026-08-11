@@ -8,6 +8,13 @@
     ]
   },
   {
+    "label": "affinity",
+    "description": "Official Affinity (Canva) AI Connector for Claude — launched April 2026, free during beta. Account-specific, no static public endpoint: log into your Affinity account (app or affinity.studio) → Integrations section → copy the personal MCP endpoint URL, export it as AFFINITY_MCP_URL, then run this. Placeholder until the real URL is set — swap it in and this becomes a real registration",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add --transport http affinity \"$AFFINITY_MCP_URL\"" }
+    ]
+  },
+  {
     "label": "agent-skills",
     "description": "Addy Osmani's 24 production-grade SDLC skills, spec through ship — https://github.com/addyosmani/agent-skills",
     "installs": [
