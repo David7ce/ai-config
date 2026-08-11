@@ -94,6 +94,14 @@
     ]
   },
   {
+    "label": "comfyui-mcp",
+    "description": "artokun/comfyui-mcp — MCP server + Claude Code plugin for ComfyUI: image generation, workflow visualization/authoring, model management, 37 tools/38 skills. Needs ComfyUI running locally (or reachable remotely) and Node.js >=22; auto-detects ComfyUI on port 8188/8000, override with COMFYUI_URL",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add artokun/comfyui-mcp && claude plugin install comfy@comfyui-mcp --scope user" },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "comfyui", "--", "npx", "-y", "comfyui-mcp"] }
+    ]
+  },
+  {
     "label": "composio",
     "description": "one MCP endpoint proxying 20,000+ tools across 1000+ SaaS apps (GitHub, Slack, Notion, etc.), loaded just-in-time so the catalog doesn't blow context — https://composio.dev. No static public URL: needs a Composio account + API key, and the MCP session URL is generated per-user via their SDK first (see https://composio.dev/toolkits/composio/framework/claude-code). Export COMPOSIO_MCP_URL and COMPOSIO_API_KEY before running this. Codex CLI skipped — Composio auths via a custom X-API-Key header, not the bearer token codex's --url flow expects",
     "installs": [
@@ -121,6 +129,14 @@
     "description": "Anthropic-built plugin — critique, design systems, UX writing, accessibility audits — knowledge-work-plugins marketplace, needs the knowledge-work-plugins entry installed first",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "design@knowledge-work-plugins", "--scope", "user"] }
+    ]
+  },
+  {
+    "label": "diagram-design",
+    "description": "cathrynlavery/diagram-design — 27 editorial-quality technical/product diagram types, rendered standalone HTML with inline SVG, skinnable to brand colors/fonts. Progressive disclosure (reference files load per diagram type), no build step",
+    "installs": [
+      { "agent": "claude", "shell": "claude plugin marketplace add cathrynlavery/diagram-design && claude plugin install diagram-design@diagram-design --scope user" },
+      { "agent": "codex", "command": "npx", "args": ["skills", "add", "https://github.com/cathrynlavery/diagram-design", "-a", "codex"] }
     ]
   },
   {
