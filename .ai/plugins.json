@@ -1,10 +1,24 @@
 [
   {
+    "label": "ableton-mcp",
+    "description": "ahujasid/ableton-mcp — control Ableton Live (tracks, clips, MIDI, devices) from Claude via a stdio server (uvx). Needs uv installed first, then a one-time manual step: copy AbletonMCP_Remote_Script/__init__.py from the repo into Ableton's MIDI Remote Scripts folder as an 'AbletonMCP' subfolder, then in Ableton Settings > Link/Tempo/MIDI > Control Surface select AbletonMCP (Input/Output: None) — https://github.com/ahujasid/ableton-mcp",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user ableton -- uvx ableton-mcp" }
+    ]
+  },
+  {
     "label": "academic-research-skills",
     "description": "ARS — human-in-the-loop research/writing/peer-review pipeline for academic papers, https://github.com/Imbad0202/academic-research-skills. Codex uses the separate ars-codex sibling distribution",
     "installs": [
       { "agent": "claude", "shell": "claude plugin marketplace add Imbad0202/academic-research-skills && claude plugin install academic-research-skills@academic-research-skills --scope user" },
       { "agent": "codex", "shell": "codex plugin marketplace add Imbad0202/academic-research-skills-codex --ref main && codex plugin add ars-codex@ars-codex" }
+    ]
+  },
+  {
+    "label": "adobe-creativity",
+    "description": "official Adobe-built remote MCP connector (Adobe + Anthropic) — 50+ tools across Photoshop, Lightroom, Illustrator, Firefly, Premiere, Express, InDesign, Adobe Stock. Hosted HTTP server, OAuth on first connect; guest tier is free with ~40 tools, signing into an Adobe account unlocks more — https://developer.adobe.com/adobe-for-creativity/getting-started/",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "adobe-creativity", "https://adobe-creativity.adobe.io/mcp"] }
     ]
   },
   {
@@ -29,8 +43,10 @@
   },
   {
     "label": "blender-mcp",
-    "description": "official Blender connector, built/maintained by the Blender dev team — exposes Blender's bpy API so Claude can drive 3D modeling and scene manipulation. This is a Claude Desktop Extension, not a CLI-installable package: no scriptable installer exists, add it manually via Claude Desktop > Settings > Extensions (or the directory link) — https://claude.ai/directory/connectors/ant.dir.gh.blender.blender-mcp",
-    "installs": []
+    "description": "ahujasid/blender-mcp — control Blender (3D modeling, scene manipulation) from Claude via a stdio server (uvx). Needs uv installed first, then a one-time manual step: install the repo's addon.py in Blender (Edit > Preferences > Add-ons > Install...), enable it, then click 'Connect to Claude' in the 3D View sidebar — https://github.com/ahujasid/blender-mcp",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user blender -- uvx blender-mcp" }
+    ]
   },
   {
     "label": "brand-voice",
@@ -229,6 +245,13 @@
     "description": "Anthropic-built plugin — create content, plan campaigns, analyze performance, maintain brand voice consistency — knowledge-work-plugins marketplace, needs the knowledge-work-plugins entry installed first",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "marketing@knowledge-work-plugins", "--scope", "user"] }
+    ]
+  },
+  {
+    "label": "notion",
+    "description": "official Notion-hosted remote MCP — search, read, write pages/databases across your workspace; OAuth sign-in, no API key. 18 tools — https://developers.notion.com/docs/mcp",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "notion", "https://mcp.notion.com/mcp"] }
     ]
   },
   {
