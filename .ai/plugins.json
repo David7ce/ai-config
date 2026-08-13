@@ -334,6 +334,13 @@
     ]
   },
   {
+    "label": "reaper-mcp",
+    "description": "bonfire-systems/reaper-mcp — control REAPER (create/mix/master tracks, MIDI + audio) from Claude via python-reapy. Needs a one-time manual step in REAPER first: Actions > Run ReaScript > scripts/enable_reapy.py from the repo, then restart REAPER to enable its distant API — https://github.com/bonfire-systems/reaper-mcp",
+    "installs": [
+      { "agent": "claude", "shell": "pip install reaper-mcp-server && claude mcp add -s user reaper -- reaper-mcp-server" }
+    ]
+  },
+  {
     "label": "runnet",
     "description": "RuView Sensing Bridge (SENSE-BRIDGE) MCP server, registered as 'rvagent' — https://www.npmjs.com/package/@ruvnet/rvagent",
     "installs": [
