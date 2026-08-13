@@ -89,7 +89,9 @@
   },
   {
     "label": "cloudflare",
+    "description": "official Cloudflare remote MCP — inspect/manage Cloudflare resources (Workers, DNS, KV, etc), plan infra changes. Hosted HTTP server, OAuth on first connect, no API key — https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/",
     "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "cloudflare", "https://mcp.cloudflare.com/mcp"] },
       { "agent": "codex", "command": "npx", "args": ["codex-marketplace", "add", "openai/plugins/plugins/cloudflare", "--plugin"] }
     ]
   },
@@ -163,6 +165,13 @@
     ]
   },
   {
+    "label": "elevenlabs",
+    "description": "official ElevenLabs MCP — text-to-speech, voice cloning, speech-to-text, sound effects. Local stdio server via uvx, needs ELEVENLABS_API_KEY exported first (free tier: 10k credits/month, https://elevenlabs.io/app/settings/api-keys) — https://github.com/elevenlabs/elevenlabs-mcp",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user -e ELEVENLABS_API_KEY=\"$ELEVENLABS_API_KEY\" elevenlabs -- uvx elevenlabs-mcp" }
+    ]
+  },
+  {
     "label": "engineering",
     "description": "Anthropic-built plugin — standups, code review, architecture decisions, incident response — knowledge-work-plugins marketplace, needs the knowledge-work-plugins entry installed first",
     "installs": [
@@ -180,6 +189,13 @@
     "label": "firecrawl-cli",
     "description": "init --all --browser",
     "installs": [{ "command": "npx", "args": ["-y", "firecrawl-cli@latest", "init", "--all", "--browser"] }]
+  },
+  {
+    "label": "firecrawl-mcp",
+    "description": "official Firecrawl MCP — web scraping, crawling, search, site mapping for agents. Local stdio server via npx, needs FIRECRAWL_API_KEY exported first (https://www.firecrawl.dev/app/api-keys) — https://github.com/firecrawl/firecrawl-mcp-server. Distinct from the firecrawl-cli entry above, which installs the standalone CLI",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user -e FIRECRAWL_API_KEY=\"$FIRECRAWL_API_KEY\" firecrawl -- npx -y firecrawl-mcp" }
+    ]
   },
   {
     "label": "fl-studio-mcp",
@@ -203,6 +219,13 @@
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "github@claude-plugins-official", "--scope", "user"] },
       { "agent": "codex", "shell": "codex mcp add github --url https://api.githubcopilot.com/mcp/ --bearer-token-env-var GITHUB_PAT_TOKEN" }
+    ]
+  },
+  {
+    "label": "grafana",
+    "description": "official Grafana MCP (grafana/mcp-grafana) — query dashboards/metrics/logs/alerts, work with Incident and Sift. Local stdio server, needs the mcp-grafana binary on PATH first (`go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@latest`), plus GRAFANA_URL and a service-account token exported as GRAFANA_SERVICE_ACCOUNT_TOKEN — https://github.com/grafana/mcp-grafana",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user -e GRAFANA_URL=\"$GRAFANA_URL\" -e GRAFANA_SERVICE_ACCOUNT_TOKEN=\"$GRAFANA_SERVICE_ACCOUNT_TOKEN\" grafana -- mcp-grafana" }
     ]
   },
   {
@@ -322,6 +345,13 @@
     "description": "Ruflo Engine MCP server, registered as 'ruflo' — https://www.npmjs.com/package/ruflo",
     "installs": [
       { "agent": "claude", "shell": "claude mcp add ruflo -- npx ruflo@latest mcp start" }
+    ]
+  },
+  {
+    "label": "suno",
+    "description": "AceDataCloud/SunoMCP — Suno AI music generation, lyrics, cover workflows. Unofficial: Suno has no public API, this is a hosted reseller bridge (no local install), remote HTTP server at suno.mcp.acedata.cloud/mcp, OAuth sign-in, pay-per-song billing via AceDataCloud — https://github.com/AceDataCloud/SunoMCP",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "suno", "https://suno.mcp.acedata.cloud/mcp"] }
     ]
   },
   {
