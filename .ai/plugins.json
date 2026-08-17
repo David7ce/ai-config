@@ -172,6 +172,22 @@
     ]
   },
   {
+    "label": "exa",
+    "description": "official Exa remote MCP — web search, clean page fetching, and optional multi-step research. The base hosted endpoint works anonymously with rate limits; Claude's official plugin includes Exa skills and OAuth support — https://github.com/exa-labs/exa-mcp-server",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["plugin", "install", "exa@claude-plugins-official", "--scope", "user"] },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "exa", "--url", "https://mcp.exa.ai/mcp"] }
+    ]
+  },
+  {
+    "label": "filesystem-mcp",
+    "description": "official Model Context Protocol filesystem server, maintained by the MCP project. It is scoped to the supplied current working directory, so it cannot access arbitrary paths. Windows launches it through cmd.exe for reliable npx resolution — https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user filesystem -- cmd /c npx -y @modelcontextprotocol/server-filesystem ." },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "filesystem", "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "."] }
+    ]
+  },
+  {
     "label": "engineering",
     "description": "Anthropic-built plugin — standups, code review, architecture decisions, incident response — knowledge-work-plugins marketplace, needs the knowledge-work-plugins entry installed first",
     "installs": [
@@ -253,6 +269,14 @@
     "description": "Anthropic's open-source knowledge-worker plugin marketplace — bundles skills/connectors/commands per job function — https://github.com/anthropics/knowledge-work-plugins. Add this before installing any @knowledge-work-plugins entry (brand-voice, design, engineering, figma, marketing, pdf-viewer, postiz, productivity)",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "marketplace", "add", "anthropics/knowledge-work-plugins"] }
+    ]
+  },
+  {
+    "label": "kubernetes",
+    "description": "containers/kubernetes-mcp-server — native Kubernetes/OpenShift MCP. Uses the active kubeconfig; configured read-only to prevent mutating cluster resources. Requires cluster credentials — https://github.com/containers/kubernetes-mcp-server",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user kubernetes -- npx -y kubernetes-mcp-server@latest --read-only" },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "kubernetes", "--", "npx", "-y", "kubernetes-mcp-server@latest", "--read-only"] }
     ]
   },
   {
@@ -341,6 +365,13 @@
     ]
   },
   {
+    "label": "serena",
+    "description": "oraios/serena — semantic code navigation and editing MCP that uses language-server tooling for precise, symbol-aware changes. Local stdio server via uvx; first use initializes its project index — https://github.com/oraios/serena",
+    "installs": [
+      { "agent": "claude", "shell": "claude mcp add -s user serena -- uvx --from git+https://github.com/oraios/serena serena-mcp-server" }
+    ]
+  },
+  {
     "label": "runnet",
     "description": "RuView Sensing Bridge (SENSE-BRIDGE) MCP server, registered as 'rvagent' — https://www.npmjs.com/package/@ruvnet/rvagent",
     "installs": [
@@ -362,9 +393,24 @@
     ]
   },
   {
+    "label": "sentry",
+    "description": "official Sentry remote MCP — investigate production errors, issues, traces, and release health. Hosted HTTP server; OAuth sign-in on first connection — https://docs.sentry.io/product/sentry-mcp/",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "sentry", "https://mcp.sentry.dev/mcp"] }
+    ]
+  },
+  {
     "label": "superpowers",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["plugin", "install", "superpowers@claude-plugins-official", "--scope", "user"] }
+    ]
+  },
+  {
+    "label": "supabase",
+    "description": "official Supabase remote MCP — manage projects, query data, and work with database configuration. Hosted HTTP server with OAuth; review Supabase's MCP security guidance before authorizing production projects — https://github.com/supabase/mcp",
+    "installs": [
+      { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "supabase", "https://mcp.supabase.com/mcp"] },
+      { "agent": "codex", "command": "codex", "args": ["mcp", "add", "supabase", "--url", "https://mcp.supabase.com/mcp"] }
     ]
   },
   {
