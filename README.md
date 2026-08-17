@@ -122,6 +122,11 @@ gets a `<tool>-` prefixed filename instead of a subfolder (`.ai/claude-settings.
   regenerated every run.
 - Home-scope tool config: edit `.ai/<tool>-settings.json` / `.ai/<tool>-hooks/`, then
   `dotfiles import`.
+- Claude Code model endpoint (Anthropic direct, OpenRouter, Z.ai, Moonshot, Bedrock, Vertex,
+  or a custom Anthropic-compatible gateway): profiles live in `.ai/model-providers.json`,
+  switch the active one with `node cli/provider.js use <label>` (`list` to see all, `current`
+  to check what's active) — it only touches `.ai/claude-settings.json`'s `model`/`env` keys,
+  everything else (hooks, enabledPlugins, ...) is untouched. Then `dotfiles import` to apply.
 - Machine-wide installers (Claude plugins, `mcp add` registrations, any other one-time
   setup command): edit `.ai/plugins.json`, then `dotfiles plugins`.
 - Project-scoped MCP servers (this project's, shared via git): edit `.ai/mcp-servers.json`,

@@ -2,7 +2,7 @@
   "model": "sonnet",
   "env": {
     "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
-    "ANTHROPIC_AUTH_TOKEN": "sk-or-v1-tu-clave-real-aqui",
+    "ANTHROPIC_AUTH_TOKEN": "sk-or-v1-your-real-key-here",
     "ANTHROPIC_API_KEY": "",
     "ANTHROPIC_MODEL": "deepseek/deepseek-v4-flash-0731"
   },

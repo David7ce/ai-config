@@ -1,0 +1,67 @@
+[
+  {
+    "label": "anthropic",
+    "description": "Official Anthropic API/subscription — no endpoint override, default Claude Code behavior.",
+    "model": "sonnet",
+    "env": {}
+  },
+  {
+    "label": "openrouter",
+    "description": "OpenRouter — Anthropic-compatible proxy in front of 300+ models. Get a key at https://openrouter.ai/keys. Model id format: '<provider>/<model>', see https://openrouter.ai/models.",
+    "model": "sonnet",
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+      "ANTHROPIC_AUTH_TOKEN": "sk-or-v1-your-real-key-here",
+      "ANTHROPIC_API_KEY": "",
+      "ANTHROPIC_MODEL": "deepseek/deepseek-v4-flash-0731"
+    }
+  },
+  {
+    "label": "zai",
+    "description": "Z.ai (GLM models) — Anthropic-compatible endpoint. Get a key at https://z.ai/manage-apikey/apikey-list.",
+    "model": "sonnet",
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+      "ANTHROPIC_AUTH_TOKEN": "your-zai-api-key-here",
+      "ANTHROPIC_MODEL": "glm-4.6"
+    }
+  },
+  {
+    "label": "moonshot",
+    "description": "Moonshot AI (Kimi K2) — Anthropic-compatible endpoint. Get a key at https://platform.moonshot.ai/console/api-keys.",
+    "model": "sonnet",
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://api.moonshot.ai/anthropic",
+      "ANTHROPIC_AUTH_TOKEN": "your-moonshot-api-key-here",
+      "ANTHROPIC_MODEL": "kimi-k2-turbo-preview"
+    }
+  },
+  {
+    "label": "bedrock",
+    "description": "AWS Bedrock — routes through your AWS account instead of a static key. Needs AWS credentials configured (aws configure / awsCredentialExport). Model id is the Bedrock inference-profile ARN or region-prefixed id (e.g. us.anthropic.claude-opus-4-6-v1).",
+    "model": "us.anthropic.claude-sonnet-5",
+    "env": {
+      "CLAUDE_CODE_USE_BEDROCK": "1",
+      "AWS_REGION": "us-east-1"
+    }
+  },
+  {
+    "label": "vertex",
+    "description": "Google Vertex AI — routes through your GCP project. Needs `gcloud auth application-default login` first.",
+    "model": "sonnet",
+    "env": {
+      "CLAUDE_CODE_USE_VERTEX": "1",
+      "ANTHROPIC_VERTEX_PROJECT_ID": "your-gcp-project-id",
+      "CLOUD_ML_REGION": "us-east5"
+    }
+  },
+  {
+    "label": "custom",
+    "description": "Template for any other Anthropic Messages-API-compatible gateway (self-hosted, corporate proxy, etc). Fill in the blanks.",
+    "model": "sonnet",
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://your-gateway.example.com",
+      "ANTHROPIC_AUTH_TOKEN": "your-key-here"
+    }
+  }
+]
