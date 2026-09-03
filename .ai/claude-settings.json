@@ -1,11 +1,5 @@
 {
   "model": "sonnet",
-  "env": {
-    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
-    "ANTHROPIC_AUTH_TOKEN": "sk-or-v1-your-real-key-here",
-    "ANTHROPIC_API_KEY": "",
-    "ANTHROPIC_MODEL": "deepseek/deepseek-v4-flash-0731"
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -66,9 +60,9 @@
     "context7@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "github@claude-plugins-official": true,
     "hookify@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true
+    "claude-md-management@claude-plugins-official": true,
+    "caveman@caveman": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -82,8 +76,16 @@
         "source": "github",
         "repo": "DietrichGebert/ponytail"
       }
+    },
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
     }
   },
   "effortLevel": "high",
-  "theme": "auto"
+  "theme": "auto",
+  "remoteControlAtStartup": false,
+  "disableRemoteControl": true
 }
