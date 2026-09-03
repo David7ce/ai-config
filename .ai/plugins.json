@@ -251,6 +251,16 @@
     ]
   },
   {
+    "label": "guitar-pro-mcp",
+    "description": "wegitor/guitar-pro-mcp — read/write/manipulate Guitar Pro tab files via PyGuitarPro, from Claude. Only .gp3/.gp4/.gp5 tested (not the newer Guitar Pro 7/8 binary format) — export/import through .gp5 or MusicXML as the bridge format when working from Guitar Pro 8 — https://github.com/wegitor/guitar-pro-mcp",
+    "installs": [
+      {
+        "agent": "claude",
+        "shell": "if not exist \"%USERPROFILE%\\.local\\guitar-pro-mcp\" git clone https://github.com/wegitor/guitar-pro-mcp.git \"%USERPROFILE%\\.local\\guitar-pro-mcp\" && cd /d \"%USERPROFILE%\\.local\\guitar-pro-mcp\" && uv venv && uv pip install . && claude mcp add -s user guitar-pro -- uv --directory \"%USERPROFILE%\\.local\\guitar-pro-mcp\" run -m src.run_mcp_server"
+      }
+    ]
+  },
+  {
     "label": "hookify",
     "description": "define Claude Code hooks from plain markdown rules instead of hand-writing shell/JS hook scripts",
     "installs": [
@@ -299,6 +309,16 @@
     "description": "official Notion-hosted remote MCP — search, read, write pages/databases across your workspace; OAuth sign-in, no API key. 18 tools — https://developers.notion.com/docs/mcp",
     "installs": [
       { "agent": "claude", "command": "claude", "args": ["mcp", "add", "-s", "user", "--transport", "http", "notion", "https://mcp.notion.com/mcp"] }
+    ]
+  },
+  {
+    "label": "musescore-mcp",
+    "description": "ghchen99/mcp-musescore — WebSocket-based MuseScore control from Claude: compose notes/rests, add lyrics, navigate/select score, manage measures, LilyPond-mapped polyphony. Needs a one-time manual step in MuseScore first: Plugins > Plugin Manager > enable 'MuseScore API Server' (the .qml this installs into the Plugins folder), then with a score open, Plugins > MuseScore API Server before the Python server can connect (WebSocket on port 8765) — https://github.com/ghchen99/mcp-musescore",
+    "installs": [
+      {
+        "agent": "claude",
+        "shell": "if not exist \"%USERPROFILE%\\.local\\mcp-musescore\" git clone https://github.com/ghchen99/mcp-musescore.git \"%USERPROFILE%\\.local\\mcp-musescore\" && cd /d \"%USERPROFILE%\\.local\\mcp-musescore\" && python -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt && if not exist \"%USERPROFILE%\\Documents\\MuseScore4\\Plugins\" mkdir \"%USERPROFILE%\\Documents\\MuseScore4\\Plugins\" && copy /y musescore-mcp-websocket.qml \"%USERPROFILE%\\Documents\\MuseScore4\\Plugins\\\" && claude mcp add -s user musescore -- \"%USERPROFILE%\\.local\\mcp-musescore\\.venv\\Scripts\\python.exe\" \"%USERPROFILE%\\.local\\mcp-musescore\\server.py\""
+      }
     ]
   },
   {
@@ -362,13 +382,6 @@
     "description": "bonfire-systems/reaper-mcp — control REAPER (create/mix/master tracks, MIDI + audio) from Claude via python-reapy. Needs a one-time manual step in REAPER first: Actions > Run ReaScript > scripts/enable_reapy.py from the repo, then restart REAPER to enable its distant API — https://github.com/bonfire-systems/reaper-mcp",
     "installs": [
       { "agent": "claude", "shell": "pip install reaper-mcp-server && claude mcp add -s user reaper -- reaper-mcp-server" }
-    ]
-  },
-  {
-    "label": "serena",
-    "description": "oraios/serena — semantic code navigation and editing MCP that uses language-server tooling for precise, symbol-aware changes. Local stdio server via uvx; first use initializes its project index — https://github.com/oraios/serena",
-    "installs": [
-      { "agent": "claude", "shell": "claude mcp add -s user serena -- uvx --from git+https://github.com/oraios/serena serena-mcp-server" }
     ]
   },
   {
